@@ -308,24 +308,8 @@ function TiebreakPanel({
           ? detectDeadHeats(tiebreak.correctAnswer, tiebreak.guesses, ranked)
           : [];
       const queue = [...stillLevel, ...(tiebreak.pendingDeadHeats ?? [])];
-      const nextQuestion = queue.length > 0 ? pickFollowUpQuestion() : null;
 
-      if (queue.length > 0 && nextQuestion) {
-        await startTiebreak(
-          quizId,
-          hostUid,
-          nextQuestion.question,
-          nextQuestion.answer,
-          tiebreak.contestedPosition,
-          queue[0],
-          tiebreak.mode,
-          {
-            attempt: (tiebreak.attempt ?? 1) + 1,
-            pendingOrder: fullOrder,
-            pendingDeadHeats: queue.slice(1),
-            usedQuestionIds: [...(tiebreak.usedQuestionIds ?? []), nextQuestion.id],
-          }
-        );
+      if (queue.length > 0 && (await runDecider(queue[0], fullOrder, queue.slice(1)))) {
         return;
       }
 
@@ -336,12 +320,58 @@ function TiebreakPanel({
     }
   }
 
-  /** A bank question this chain hasn't already spent, at random. */
-  function pickFollowUpQuestion(): TiebreakQuestion | null {
+  /**
+   * Starts another attempt between `stillContested`, using a question
+   * this chain hasn't spent yet. Returns false if the bank has nothing
+   * left to ask, so the caller can fall back rather than hang.
+   */
+  async function runDecider(
+    stillContested: string[],
+    orderSoFar: string[] | null,
+    queued: string[][]
+  ): Promise<boolean> {
     const spent = tiebreak.usedQuestionIds ?? [];
     const available = (tiebreakQuestions ?? []).filter((q) => !spent.includes(q.id));
-    if (available.length === 0) return null;
-    return available[Math.floor(Math.random() * available.length)];
+    if (available.length === 0) return false;
+
+    const next = available[Math.floor(Math.random() * available.length)];
+    await startTiebreak(
+      quizId,
+      hostUid,
+      next.question,
+      next.answer,
+      tiebreak.contestedPosition,
+      stillContested,
+      tiebreak.mode,
+      {
+        attempt: (tiebreak.attempt ?? 1) + 1,
+        pendingOrder: orderSoFar,
+        pendingDeadHeats: queued,
+        usedQuestionIds: [...spent, next.id],
+      }
+    );
+    return true;
+  }
+
+  /**
+   * Manual mode's escape hatch: the host has looked at the paper answers
+   * and can't split them either - both wrote the same thing, or both are
+   * equally wrong. Runs a fresh question between the same teams.
+   *
+   * Nothing new has been established, so the order built up so far is
+   * carried through untouched rather than being guessed at.
+   */
+  async function declareDeadHeat() {
+    setIsSaving(true);
+    try {
+      await runDecider(
+        tiebreak.contestedTeamIds,
+        tiebreak.pendingOrder ?? null,
+        tiebreak.pendingDeadHeats ?? []
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -459,7 +489,7 @@ function TiebreakPanel({
               );
             })}
           </div>
-          {!tiebreak.revealed && (
+          {!tiebreak.revealed ? (
             <Button
               variant="primary"
               size="lg"
@@ -468,6 +498,21 @@ function TiebreakPanel({
             >
               Reveal Answer
             </Button>
+          ) : (
+            <div className="mt-4">
+              <Button
+                variant="danger"
+                disabled={followUpsAvailable === 0 || isSaving}
+                onClick={declareDeadHeat}
+              >
+                {isSaving ? "Starting…" : "Dead heat — run another question"}
+              </Button>
+              <p className="mt-2 text-xs text-ink-muted">
+                {followUpsAvailable > 0
+                  ? `Can't split them? This pulls a fresh question and runs it between the same teams. ${followUpsAvailable} unused question${followUpsAvailable === 1 ? "" : "s"} left.`
+                  : "No unused questions left in the bank to run a decider with."}
+              </p>
+            </div>
           )}
         </div>
       )}
