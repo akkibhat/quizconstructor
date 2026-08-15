@@ -3,10 +3,14 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    function isHostOfQuiz(quizId) {
-      return request.auth != null
-        && request.auth.uid ==
-          firestore.get(/databases/(default)/documents/quizzes/$(quizId)).data.hostUid;
+    // This app only ever has one possible signed-in identity - the single
+    // host account (there's no public signup, see lib/hooks/useAuth.ts).
+    // So "signed in" and "is the host" are equivalent here, and checking
+    // per-quiz ownership via a Storage-rules-to-Firestore cross-reference
+    // isn't worth the reliability risk that approach carries - keep it to
+    // a plain auth check.
+    function isSignedIn() {
+      return request.auth != null;
     }
 
     function isValidImage() {
@@ -20,23 +24,16 @@ service firebase.storage {
     }
 
     // /quizzes/{quizId}/questions/{questionId}/image.<ext> or audio.<ext>
+    // Long Game clues use this same path too, since clues are stored as
+    // that round's "questions" - see Round.isLongGame.
     match /quizzes/{quizId}/questions/{questionId}/{fileName} {
       allow read: if true;
-      allow delete: if isHostOfQuiz(quizId);
-      allow create, update: if isHostOfQuiz(quizId)
+      allow delete: if isSignedIn();
+      allow create, update: if isSignedIn()
         && (
           (fileName.matches('image\\..*') && isValidImage())
           || (fileName.matches('audio\\..*') && isValidAudio())
         );
-    }
-
-    // /quizzes/{quizId}/rounds/{roundId}/longgame-image.<ext>
-    match /quizzes/{quizId}/rounds/{roundId}/{fileName} {
-      allow read: if true;
-      allow delete: if isHostOfQuiz(quizId);
-      allow create, update: if isHostOfQuiz(quizId)
-        && fileName.matches('longgame-image\\..*')
-        && isValidImage();
     }
   }
 }

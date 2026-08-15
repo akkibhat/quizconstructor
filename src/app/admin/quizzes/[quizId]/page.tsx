@@ -4,24 +4,40 @@ import Link from "next/link";
 import { use } from "react";
 
 import { RequireAuth } from "@/components/RequireAuth";
+import { useQuestions } from "@/lib/hooks/useQuestions";
 import { useQuiz } from "@/lib/hooks/useQuiz";
 import { useRounds } from "@/lib/hooks/useRounds";
-import { addRound, deleteRound, swapRoundOrder } from "@/lib/rounds";
+import { addRound, deleteRound, swapRoundOrder, TooFewRoundsForLongGameError } from "@/lib/rounds";
 import type { Round } from "@/lib/types/round";
 
 function RoundRow({
   round,
   index,
-  rounds,
+  realRounds,
   quizId,
+  longGameClueCount,
 }: {
   round: Round;
   index: number;
-  rounds: Round[];
+  realRounds: Round[];
   quizId: string;
+  longGameClueCount: number;
 }) {
   const canMoveUp = index > 0;
-  const canMoveDown = index < rounds.length - 1;
+  const canMoveDown = index < realRounds.length - 1;
+
+  async function handleDelete() {
+    if (!confirm(`Delete "${round.title}" and all its questions?`)) return;
+    try {
+      await deleteRound(quizId, round.id, realRounds.length - 1, longGameClueCount);
+    } catch (error) {
+      if (error instanceof TooFewRoundsForLongGameError) {
+        alert(error.message);
+        return;
+      }
+      throw error;
+    }
+  }
 
   return (
     <li className="flex items-center justify-between rounded border border-neutral-800 bg-neutral-900 px-4 py-3">
@@ -35,7 +51,7 @@ function RoundRow({
         <button
           type="button"
           disabled={!canMoveUp}
-          onClick={() => swapRoundOrder(quizId, round, rounds[index - 1])}
+          onClick={() => swapRoundOrder(quizId, round, realRounds[index - 1])}
           className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-30"
           aria-label="Move round up"
         >
@@ -44,7 +60,7 @@ function RoundRow({
         <button
           type="button"
           disabled={!canMoveDown}
-          onClick={() => swapRoundOrder(quizId, round, rounds[index + 1])}
+          onClick={() => swapRoundOrder(quizId, round, realRounds[index + 1])}
           className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-30"
           aria-label="Move round down"
         >
@@ -52,11 +68,7 @@ function RoundRow({
         </button>
         <button
           type="button"
-          onClick={() => {
-            if (confirm(`Delete "${round.title}" and all its questions?`)) {
-              deleteRound(quizId, round.id, rounds.length - 1);
-            }
-          }}
+          onClick={handleDelete}
           className="rounded border border-red-900 px-2 py-1 text-xs text-red-400"
         >
           Delete
@@ -70,6 +82,10 @@ function QuizEditor({ quizId }: { quizId: string }) {
   const quiz = useQuiz(quizId);
   const rounds = useRounds(quizId);
 
+  const longGameRound = rounds?.find((r) => r.isLongGame);
+  const realRounds = rounds?.filter((r) => !r.isLongGame) ?? [];
+  const longGameClues = useQuestions(quizId, longGameRound?.id);
+
   if (quiz === undefined || rounds === undefined) {
     return <p className="p-10 text-neutral-400">Loading…</p>;
   }
@@ -80,6 +96,13 @@ function QuizEditor({ quizId }: { quizId: string }) {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
+      <Link
+        href="/admin/quizzes"
+        className="mb-4 inline-block text-sm text-neutral-400 hover:text-neutral-200"
+      >
+        ← Back to my quizzes
+      </Link>
+
       <div className="mb-2 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-100">{quiz.title}</h1>
         <span className="rounded border border-neutral-700 px-2 py-1 font-mono text-sm text-neutral-400">
@@ -87,19 +110,31 @@ function QuizEditor({ quizId }: { quizId: string }) {
         </span>
       </div>
       <p className="mb-8 text-sm text-neutral-500">
-        {quiz.longGameEnabled && "The Long Game enabled"}
-        {quiz.longGameEnabled && quiz.doublePointsEnabled && " · "}
         {quiz.doublePointsEnabled &&
           `Double points enabled (${quiz.doublePointsPicksPerTeam} pick${
             quiz.doublePointsPicksPerTeam === 1 ? "" : "s"
           } per team)`}
       </p>
 
+      {quiz.longGameEnabled && longGameRound && (
+        <Link
+          href={`/admin/quizzes/${quizId}/rounds/${longGameRound.id}`}
+          className="mb-8 flex items-center justify-between rounded border border-amber-900 bg-amber-950/30 px-4 py-3 hover:border-amber-700"
+        >
+          <span className="text-neutral-100">The Long Game</span>
+          <span className="text-xs text-neutral-500">
+            {longGameClues === undefined
+              ? "…"
+              : `${longGameClues.length} of ${realRounds.length} clues`}
+          </span>
+        </Link>
+      )}
+
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-medium text-neutral-100">Rounds</h2>
         <button
           type="button"
-          onClick={() => addRound(quizId, rounds)}
+          onClick={() => addRound(quizId, realRounds)}
           className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-900"
         >
           Add Round
@@ -107,8 +142,15 @@ function QuizEditor({ quizId }: { quizId: string }) {
       </div>
 
       <ul className="space-y-2">
-        {rounds.map((round, index) => (
-          <RoundRow key={round.id} round={round} index={index} rounds={rounds} quizId={quizId} />
+        {realRounds.map((round, index) => (
+          <RoundRow
+            key={round.id}
+            round={round}
+            index={index}
+            realRounds={realRounds}
+            quizId={quizId}
+            longGameClueCount={longGameClues?.length ?? 0}
+          />
         ))}
       </ul>
     </div>

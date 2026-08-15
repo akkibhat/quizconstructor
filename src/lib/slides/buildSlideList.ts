@@ -19,22 +19,32 @@ import type { Slide } from "@/lib/types/slide";
  * After every round has run through this, if Long Game is enabled, one
  * final slide reveals the overall Long Game answer.
  *
- * @param rounds - every round in the quiz, sorted by `order` ascending.
- * @param questionsByRound - each round's questions, sorted by `order`
+ * @param realRounds - every *non*-Long-Game round in the quiz, sorted by
+ *   `order` ascending. (The Long Game round itself, if any, is passed
+ *   separately via `longGameClues` - it isn't one of the rounds a slide
+ *   sequence steps through in its own right.)
+ * @param questionsByRound - each real round's questions, sorted by `order`
  *   ascending, keyed by roundId.
  * @param longGameEnabled - whether the quiz has the Long Game turned on.
+ * @param longGameClues - the Long Game round's clues (stored as that
+ *   round's "questions" - see Round.isLongGame), sorted by `order`
+ *   ascending. Matched to realRounds *by position*, not by any shared ID:
+ *   clue at index i is shown at the end of realRounds[i], whichever round
+ *   that currently is. This is what makes "clue 1 is the vaguest, shown at
+ *   the first round" hold regardless of how rounds get reordered.
  * @param longGameFinalAnswer - the quiz's overall Long Game solution, used
  *   for the one closing slide.
  */
 export function buildSlideList(
-  rounds: Round[],
+  realRounds: Round[],
   questionsByRound: Record<string, Question[]>,
   longGameEnabled: boolean,
+  longGameClues: Question[],
   longGameFinalAnswer: string
 ): Slide[] {
   const slides: Slide[] = [];
 
-  for (const round of rounds) {
+  realRounds.forEach((round, index) => {
     slides.push({ type: "round-title", roundId: round.id, title: round.title });
 
     const questions = questionsByRound[round.id] ?? [];
@@ -50,12 +60,13 @@ export function buildSlideList(
       });
     }
 
-    if (longGameEnabled && round.longGameClueText) {
+    const clue = longGameClues[index];
+    if (longGameEnabled && clue) {
       slides.push({
         type: "long-game-clue",
         roundId: round.id,
-        clueText: round.longGameClueText,
-        imagePath: round.longGameClueImagePath,
+        clueText: clue.text,
+        imagePath: clue.imagePath,
       });
     }
 
@@ -72,7 +83,7 @@ export function buildSlideList(
         answerText: question.answer,
       });
     }
-  }
+  });
 
   if (longGameEnabled) {
     slides.push({ type: "long-game-answer", answerText: longGameFinalAnswer });

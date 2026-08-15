@@ -5,6 +5,7 @@ import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useQuizzes } from "@/lib/hooks/useQuizzes";
+import { archiveQuiz } from "@/lib/quizzes";
 
 function QuizzesList() {
   const { user } = useAuth();
@@ -32,14 +33,25 @@ function QuizzesList() {
 
       <ul className="space-y-2">
         {quizzes?.map((quiz) => (
-          <li key={quiz.id}>
-            <Link
-              href={`/admin/quizzes/${quiz.id}`}
-              className="flex items-center justify-between rounded border border-neutral-800 bg-neutral-900 px-4 py-3 hover:border-neutral-700"
-            >
-              <span className="text-neutral-100">{quiz.title}</span>
-              <span className="font-mono text-sm text-neutral-500">{quiz.code}</span>
+          <li
+            key={quiz.id}
+            className="flex items-center justify-between rounded border border-neutral-800 bg-neutral-900 px-4 py-3 hover:border-neutral-700"
+          >
+            <Link href={`/admin/quizzes/${quiz.id}`} className="flex-1 text-neutral-100">
+              {quiz.title}
             </Link>
+            <span className="mr-4 font-mono text-sm text-neutral-500">{quiz.code}</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`Delete "${quiz.title}"?`)) {
+                  archiveQuiz(quiz.id);
+                }
+              }}
+              className="rounded border border-red-900 px-2 py-1 text-xs text-red-400"
+            >
+              Delete
+            </button>
           </li>
         ))}
       </ul>

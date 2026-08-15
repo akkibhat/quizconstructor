@@ -5,6 +5,7 @@ import {
   serverTimestamp,
   Timestamp,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 
 import { generateQuizCode } from "@/lib/codeGen";
@@ -30,10 +31,22 @@ class CodeCollisionError extends Error {}
 const MAX_CODE_ATTEMPTS = 5;
 
 /**
- * Creates a new quiz: generates a unique short code, writes the quiz
- * document and its quizCodes lookup entry, and scaffolds the requested
- * number of empty rounds (titled "Round 1", "Round 2", ...) - all in one
- * atomic transaction, so nothing is left half-created if it fails partway.
+ * Creates a new quiz: generates a unique short code and writes the quiz
+ * document plus its quizCodes lookup entry, then scaffolds the requested
+ * number of empty rounds (titled "Round 1", "Round 2", ...) as a follow-up
+ * step.
+ *
+ * This is deliberately NOT one single transaction covering the rounds too.
+ * The round documents' security rule needs to `get()` the parent quiz doc
+ * to confirm the caller is its host - but rules evaluate against the
+ * state of the database as of the *start* of a transaction, so if the
+ * quiz doc were being created in that same transaction, the rule would
+ * see it as not existing yet and reject the write. Creating the quiz
+ * first (so it's genuinely committed) and then scaffolding rounds as a
+ * separate batch avoids that chicken-and-egg problem. If the round
+ * scaffolding step were to fail, the quiz still exists and rounds can be
+ * added manually via "Add Round" - not a scenario worth full rollback
+ * complexity for a personal tool.
  *
  * Retries with a new random code (up to MAX_CODE_ATTEMPTS times) if the
  * chosen code happens to already be in use.
@@ -72,29 +85,66 @@ export async function createQuiz(
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-
-        for (let i = 0; i < input.numRounds; i++) {
-          const roundRef = doc(collection(db, "quizzes", quizRef.id, "rounds"));
-          transaction.set(roundRef, {
-            // Gapped values (10, 20, 30, ...) so later reordering only
-            // ever has to touch the 1-2 rounds a drag moved past.
-            order: (i + 1) * 10,
-            title: `Round ${i + 1}`,
-            longGameClueText: null,
-            longGameClueImagePath: null,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        }
       });
-
-      return { quizId: quizRef.id, code };
     } catch (error) {
       if (error instanceof CodeCollisionError) {
         continue;
       }
       throw error;
     }
+
+    // The quiz doc is now committed, so the rounds'/questions' security
+    // rules can successfully look it up to confirm hostUid.
+    const batch = writeBatch(db);
+    for (let i = 0; i < input.numRounds; i++) {
+      const roundRef = doc(collection(db, "quizzes", quizRef.id, "rounds"));
+      batch.set(roundRef, {
+        // Gapped values (10, 20, 30, ...) so later reordering only ever
+        // has to touch the 1-2 rounds a drag moved past.
+        order: (i + 1) * 10,
+        title: `Round ${i + 1}`,
+        isLongGame: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    if (input.longGameEnabled) {
+      // The Long Game is modeled as its own round (see Round.isLongGame),
+      // with one clue per real round stored as that round's "questions" -
+      // this reuses the same CRUD/reorder/hooks as normal questions
+      // instead of a parallel set of types and functions. Scaffolded with
+      // exactly numRounds empty clue slots to match, same as the real
+      // rounds above.
+      const longGameRoundRef = doc(collection(db, "quizzes", quizRef.id, "rounds"));
+      batch.set(longGameRoundRef, {
+        order: 0,
+        title: "The Long Game",
+        isLongGame: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      for (let i = 0; i < input.numRounds; i++) {
+        const clueRef = doc(
+          collection(db, "quizzes", quizRef.id, "rounds", longGameRoundRef.id, "questions")
+        );
+        batch.set(clueRef, {
+          order: (i + 1) * 10,
+          text: "",
+          answer: "",
+          imagePath: null,
+          audioPath: null,
+          audioPlayMode: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
+
+    await batch.commit();
+
+    return { quizId: quizRef.id, code };
   }
 
   throw new Error("Could not generate a unique quiz code after several attempts.");

@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { use, useState } from "react";
 
 import { RequireAuth } from "@/components/RequireAuth";
 import { useQuestions } from "@/lib/hooks/useQuestions";
 import { useQuiz } from "@/lib/hooks/useQuiz";
 import { useRounds } from "@/lib/hooks/useRounds";
-import { uploadLongGameClueImage, uploadQuestionAudio, uploadQuestionImage } from "@/lib/media";
+import { uploadQuestionAudio, uploadQuestionImage } from "@/lib/media";
 import { addQuestion, deleteQuestion, swapQuestionOrder, updateQuestion } from "@/lib/questions";
 import { updateRound } from "@/lib/rounds";
 import type { AudioPlayMode, Question } from "@/lib/types/question";
@@ -17,12 +18,14 @@ function QuestionEditor({
   questions,
   quizId,
   roundId,
+  isLongGame,
 }: {
   question: Question;
   index: number;
   questions: Question[];
   quizId: string;
   roundId: string;
+  isLongGame: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
 
@@ -59,14 +62,16 @@ function QuestionEditor({
   return (
     <li className="space-y-3 rounded border border-neutral-800 bg-neutral-900 p-4">
       <div className="flex items-start justify-between gap-4">
-        <span className="pt-2 text-sm text-neutral-500">Q{index + 1}</span>
+        <span className="pt-2 text-sm text-neutral-500">
+          {isLongGame ? `Clue ${index + 1}` : `Q${index + 1}`}
+        </span>
         <div className="flex items-center gap-2">
           <button
             type="button"
             disabled={index === 0}
             onClick={() => swapQuestionOrder(quizId, roundId, question, questions[index - 1])}
             className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-30"
-            aria-label="Move question up"
+            aria-label="Move up"
           >
             ↑
           </button>
@@ -75,14 +80,14 @@ function QuestionEditor({
             disabled={index === questions.length - 1}
             onClick={() => swapQuestionOrder(quizId, roundId, question, questions[index + 1])}
             className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-30"
-            aria-label="Move question down"
+            aria-label="Move down"
           >
             ↓
           </button>
           <button
             type="button"
             onClick={() => {
-              if (confirm("Delete this question?")) {
+              if (confirm(isLongGame ? "Delete this clue?" : "Delete this question?")) {
                 deleteQuestion(quizId, roundId, question.id);
               }
             }}
@@ -95,18 +100,21 @@ function QuestionEditor({
 
       <textarea
         defaultValue={question.text}
-        placeholder="Question text"
+        placeholder={isLongGame ? "Clue text" : "Question text"}
         onBlur={(event) => updateQuestion(quizId, roundId, question.id, { text: event.target.value })}
         className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
         rows={2}
       />
-      <textarea
-        defaultValue={question.answer}
-        placeholder="Answer"
-        onBlur={(event) => updateQuestion(quizId, roundId, question.id, { answer: event.target.value })}
-        className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-        rows={1}
-      />
+
+      {!isLongGame && (
+        <textarea
+          defaultValue={question.answer}
+          placeholder="Answer"
+          onBlur={(event) => updateQuestion(quizId, roundId, question.id, { answer: event.target.value })}
+          className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+          rows={1}
+        />
+      )}
 
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <label className="text-neutral-400">
@@ -116,26 +124,28 @@ function QuestionEditor({
         {question.imagePath && <span className="text-xs text-neutral-500">✓ attached</span>}
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        <label className="text-neutral-400">
-          Audio:{" "}
-          <input type="file" accept="audio/*" onChange={handleAudioChange} disabled={uploading} />
-        </label>
-        {question.audioPath && (
-          <select
-            value={question.audioPlayMode ?? "manual"}
-            onChange={(event) =>
-              updateQuestion(quizId, roundId, question.id, {
-                audioPlayMode: event.target.value as AudioPlayMode,
-              })
-            }
-            className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-neutral-100"
-          >
-            <option value="autoplay">Autoplay (background clue)</option>
-            <option value="manual">Manual (name that tune / lyrics)</option>
-          </select>
-        )}
-      </div>
+      {!isLongGame && (
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          <label className="text-neutral-400">
+            Audio:{" "}
+            <input type="file" accept="audio/*" onChange={handleAudioChange} disabled={uploading} />
+          </label>
+          {question.audioPath && (
+            <select
+              value={question.audioPlayMode ?? "manual"}
+              onChange={(event) =>
+                updateQuestion(quizId, roundId, question.id, {
+                  audioPlayMode: event.target.value as AudioPlayMode,
+                })
+              }
+              className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-neutral-100"
+            >
+              <option value="autoplay">Autoplay (background clue)</option>
+              <option value="manual">Manual (name that tune / lyrics)</option>
+            </select>
+          )}
+        </div>
+      )}
     </li>
   );
 }
@@ -144,9 +154,10 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
   const quiz = useQuiz(quizId);
   const rounds = useRounds(quizId);
   const questions = useQuestions(quizId, roundId);
-  const [uploadingClueImage, setUploadingClueImage] = useState(false);
 
   const round = rounds?.find((r) => r.id === roundId);
+  const isLongGame = round?.isLongGame ?? false;
+  const realRoundCount = rounds?.filter((r) => !r.isLongGame).length ?? 0;
 
   if (quiz === undefined || rounds === undefined || questions === undefined) {
     return <p className="p-10 text-neutral-400">Loading…</p>;
@@ -156,63 +167,58 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
     return <p className="p-10 text-neutral-400">No such round.</p>;
   }
 
-  async function handleClueImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setUploadingClueImage(true);
-    try {
-      const path = await uploadLongGameClueImage(quizId, roundId, file);
-      await updateRound(quizId, roundId, { longGameClueImagePath: path });
-    } finally {
-      setUploadingClueImage(false);
-    }
-  }
+  // The Long Game must always have at most one clue per real round - see
+  // TooFewRoundsForLongGameError in lib/rounds.ts for the other half of
+  // this invariant (blocking round deletion instead of guessing which
+  // clue to drop).
+  const atClueCap = isLongGame && questions.length >= realRoundCount;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
-      <input
-        defaultValue={round.title}
-        onBlur={(event) => updateRound(quizId, roundId, { title: event.target.value })}
-        className="mb-8 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-2xl font-semibold text-neutral-100"
-      />
+      <Link
+        href={`/admin/quizzes/${quizId}`}
+        className="mb-4 inline-block text-sm text-neutral-400 hover:text-neutral-200"
+      >
+        ← Back to quiz
+      </Link>
 
-      {quiz.longGameEnabled && (
-        <div className="mb-8 space-y-2 rounded border border-neutral-800 bg-neutral-900 p-4">
-          <h2 className="text-sm font-medium text-neutral-300">The Long Game clue for this round</h2>
-          <textarea
-            defaultValue={round.longGameClueText ?? ""}
-            placeholder="Clue text"
-            onBlur={(event) =>
-              updateRound(quizId, roundId, { longGameClueText: event.target.value })
-            }
-            className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-            rows={2}
-          />
-          <label className="text-sm text-neutral-400">
-            Clue image:{" "}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleClueImageChange}
-              disabled={uploadingClueImage}
-            />
-          </label>
-          {round.longGameClueImagePath && (
-            <span className="ml-2 text-xs text-neutral-500">✓ attached</span>
-          )}
-        </div>
+      {isLongGame ? (
+        <h1 className="mb-2 text-2xl font-semibold text-neutral-100">The Long Game</h1>
+      ) : (
+        <input
+          defaultValue={round.title}
+          onBlur={(event) => updateRound(quizId, roundId, { title: event.target.value })}
+          className="mb-8 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-2xl font-semibold text-neutral-100"
+        />
+      )}
+
+      {isLongGame && (
+        <p className="mb-8 text-sm text-neutral-500">
+          One clue per round, in order from vaguest to easiest - clue {"{"}
+          n{"}"} is shown at the end of round {"{"}n{"}"}. Exactly one clue slot per real round is
+          enforced automatically.
+        </p>
       )}
 
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-medium text-neutral-100">Questions</h2>
+        <h2 className="text-lg font-medium text-neutral-100">
+          {isLongGame ? "Clues" : "Questions"}
+        </h2>
         <button
           type="button"
+          disabled={atClueCap}
           onClick={() => addQuestion(quizId, roundId, questions)}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-900"
+          className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-900 disabled:opacity-30"
         >
-          Add Question
+          {isLongGame ? "Add Clue" : "Add Question"}
         </button>
       </div>
+      {atClueCap && (
+        <p className="mb-4 text-xs text-neutral-500">
+          There{"'"}s already one clue per round ({realRoundCount}). Add another round first if
+          you need more.
+        </p>
+      )}
 
       <ul className="space-y-3">
         {questions.map((question, index) => (
@@ -223,6 +229,7 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
             questions={questions}
             quizId={quizId}
             roundId={roundId}
+            isLongGame={isLongGame}
           />
         ))}
       </ul>

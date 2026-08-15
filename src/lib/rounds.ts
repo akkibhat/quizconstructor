@@ -19,8 +19,7 @@ export async function addRound(quizId: string, existingRounds: Round[]): Promise
   batch.set(roundRef, {
     order: highestOrder + 10,
     title: `Round ${existingRounds.length + 1}`,
-    longGameClueText: null,
-    longGameClueImagePath: null,
+    isLongGame: false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -34,7 +33,7 @@ export async function addRound(quizId: string, existingRounds: Round[]): Promise
 export async function updateRound(
   quizId: string,
   roundId: string,
-  updates: Partial<Pick<Round, "title" | "longGameClueText" | "longGameClueImagePath">>
+  updates: Partial<Pick<Round, "title">>
 ): Promise<void> {
   await updateDoc(doc(db, "quizzes", quizId, "rounds", roundId), {
     ...updates,
@@ -42,17 +41,33 @@ export async function updateRound(
   });
 }
 
+/** Thrown by deleteRound when doing so would leave fewer rounds than the Long Game has clues. */
+export class TooFewRoundsForLongGameError extends Error {}
+
 /**
  * Deletes a round and everything under it. Firestore doesn't cascade-delete
  * subcollections, so the round's questions have to be removed explicitly
  * first - otherwise they'd become permanently unreachable orphans (not
  * even visible in the Firebase console's default views).
+ *
+ * Refuses to delete (throwing TooFewRoundsForLongGameError) if the
+ * resulting round count would be less than the Long Game's current clue
+ * count. This is deliberate: rather than silently guessing which clue to
+ * drop, the host has to go trim The Long Game themselves first, so they
+ * choose which clue goes.
  */
 export async function deleteRound(
   quizId: string,
   roundId: string,
-  remainingRoundCount: number
+  remainingRoundCount: number,
+  longGameClueCount: number
 ): Promise<void> {
+  if (longGameClueCount > remainingRoundCount) {
+    throw new TooFewRoundsForLongGameError(
+      `The Long Game currently has ${longGameClueCount} clue${longGameClueCount === 1 ? "" : "s"}, but this quiz would only have ${remainingRoundCount} round${remainingRoundCount === 1 ? "" : "s"} left. Remove a clue from The Long Game first.`
+    );
+  }
+
   const questionsSnapshot = await getDocs(
     collection(db, "quizzes", quizId, "rounds", roundId, "questions")
   );

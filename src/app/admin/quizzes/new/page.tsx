@@ -39,7 +39,11 @@ function NewQuizForm() {
         hostUid: user.uid,
       });
       router.push(`/admin/quizzes/${quizId}`);
-    } catch {
+    } catch (submitError) {
+      // Logged so the actual Firestore/rules error is visible in devtools -
+      // the on-page message stays generic since most causes aren't
+      // actionable by whoever's looking at the form.
+      console.error("Failed to create quiz:", submitError);
       setError("Couldn't create the quiz - please try again.");
       setIsSubmitting(false);
     }

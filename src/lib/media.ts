@@ -26,12 +26,6 @@ export async function uploadQuestionAudio(quizId: string, questionId: string, fi
   return path;
 }
 
-export async function uploadLongGameClueImage(quizId: string, roundId: string, file: File): Promise<string> {
-  const path = `quizzes/${quizId}/rounds/${roundId}/longgame-image.${extensionOf(file)}`;
-  await uploadBytes(ref(storage, path), file, { contentType: file.type });
-  return path;
-}
-
 /** Deletes a previously-uploaded file, e.g. when a question's image is replaced or removed. */
 export async function deleteMediaAtPath(path: string): Promise<void> {
   await deleteObject(ref(storage, path));

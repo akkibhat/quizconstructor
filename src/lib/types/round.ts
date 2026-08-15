@@ -15,11 +15,15 @@ export interface Round {
 
   title: string;
 
-  // The Long Game clue revealed at the end of this round, only used when
-  // the parent quiz has longGameEnabled = true. null until the host fills
-  // it in.
-  longGameClueText: string | null;
-  longGameClueImagePath: string | null;
+  // Marks this as the special Long Game round rather than a normal round
+  // of questions - see the comment on Question.answer for why the Long
+  // Game reuses the round/question structure instead of its own types.
+  // At most one round per quiz has this set to true. Long Game rounds are
+  // excluded from the normal numbered rounds list, from numRounds, and
+  // from the up/down round-reorder controls - buildSlideList threads
+  // their questions (clues) back into the presenter flow by position
+  // (1st clue at the end of the 1st real round, and so on).
+  isLongGame: boolean;
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
