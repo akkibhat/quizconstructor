@@ -12,10 +12,10 @@ export interface LongGameResult {
   // see the warning on Round.order for why conflating the two is a bug.
   correctRoundPosition: number | null;
 
-  // numRounds_live - correctRoundPosition + 1, computed once at the moment
-  // of marking and stored here - not re-derived later, since "once
+  // Computed via calculateLongGamePoints (lib/scoring.ts) once at the
+  // moment of marking and stored here - not re-derived later, since "once
   // locked, locked" should be a stored fact rather than something that
-  // could shift if the round count changes afterwards.
+  // could shift if the round count or longGameMaxPoints changes afterwards.
   pointsAwarded: number | null;
 
   lockedAt: Timestamp | null;

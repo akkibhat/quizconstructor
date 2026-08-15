@@ -19,6 +19,11 @@ export interface CreateQuizInput {
   // only sets the starting point.
   numRounds: number;
   longGameEnabled: boolean;
+  // Points for a correct Long Game guess at round 1, decreasing to 1 by
+  // the last round - see calculateLongGamePoints in lib/scoring.ts.
+  // Ignored (but still stored, so it doesn't matter what's passed) when
+  // longGameEnabled is false.
+  longGameMaxPoints: number;
   doublePointsEnabled: boolean;
   doublePointsPicksPerTeam: number;
   hostUid: string;
@@ -78,6 +83,7 @@ export async function createQuiz(
           numRounds: input.numRounds,
           longGameEnabled: input.longGameEnabled,
           longGameFinalAnswer: "",
+          longGameMaxPoints: input.longGameMaxPoints,
           doublePointsEnabled: input.doublePointsEnabled,
           doublePointsPicksPerTeam: input.doublePointsPicksPerTeam,
           status: "setup",

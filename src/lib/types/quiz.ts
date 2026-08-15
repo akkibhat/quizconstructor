@@ -32,6 +32,12 @@ export interface Quiz {
   // route needs to show it as the final slide of the whole quiz, and
   // Display never has a login - only the quiz code.
   longGameFinalAnswer: string;
+  // Points awarded for a correct guess at round 1, decreasing to exactly 1
+  // by the last round (see calculateLongGamePoints in lib/scoring.ts).
+  // Only meaningful when longGameEnabled is true. Independent of any
+  // round's actual question count - it's just the value you've chosen,
+  // typically matching how many questions are in a round.
+  longGameMaxPoints: number;
 
   doublePointsEnabled: boolean;
   // How many rounds each team gets to flag as their own personal double

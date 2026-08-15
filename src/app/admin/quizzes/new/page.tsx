@@ -15,6 +15,7 @@ function NewQuizForm() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [numRounds, setNumRounds] = useState(8);
   const [longGameEnabled, setLongGameEnabled] = useState(false);
+  const [longGameMaxPoints, setLongGameMaxPoints] = useState(10);
   const [doublePointsEnabled, setDoublePointsEnabled] = useState(false);
   const [doublePointsPicksPerTeam, setDoublePointsPicksPerTeam] = useState(2);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,6 +33,7 @@ function NewQuizForm() {
         date: new Date(date),
         numRounds,
         longGameEnabled,
+        longGameMaxPoints,
         doublePointsEnabled,
         // If double points is off, this value is irrelevant - the team
         // model treats it as "pick zero rounds" regardless.
@@ -109,6 +111,27 @@ function NewQuizForm() {
           />
           Enable The Long Game
         </label>
+
+        {longGameEnabled && (
+          <div className="space-y-1 pl-6">
+            <label htmlFor="longGameMaxPoints" className="text-sm text-neutral-400">
+              Points for a round 1 correct guess
+            </label>
+            <input
+              id="longGameMaxPoints"
+              type="number"
+              min={1}
+              required
+              value={longGameMaxPoints}
+              onChange={(event) => setLongGameMaxPoints(Number(event.target.value))}
+              className="w-32 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+            />
+            <p className="text-xs text-neutral-500">
+              Decreases each round, always landing on exactly 1 point by the last round -
+              typically set to match how many questions are in a round.
+            </p>
+          </div>
+        )}
 
         <label className="flex items-center gap-2 text-neutral-100">
           <input

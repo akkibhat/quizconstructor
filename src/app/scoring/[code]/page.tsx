@@ -25,6 +25,7 @@ function TeamScoreRow({
   raw,
   points,
   longGameEnabled,
+  longGameMaxPoints,
   isLocked,
   lockedRoundPosition,
   lockedPoints,
@@ -37,6 +38,7 @@ function TeamScoreRow({
   raw: number | undefined;
   points: number | undefined;
   longGameEnabled: boolean;
+  longGameMaxPoints: number;
   isLocked: boolean;
   lockedRoundPosition: number | null | undefined;
   lockedPoints: number | null | undefined;
@@ -75,7 +77,15 @@ function TeamScoreRow({
           ) : (
             <button
               type="button"
-              onClick={() => markLongGameCorrect(quizId, team.id, roundPosition, liveRealRoundCount)}
+              onClick={() =>
+                markLongGameCorrect(
+                  quizId,
+                  team.id,
+                  roundPosition,
+                  liveRealRoundCount,
+                  longGameMaxPoints
+                )
+              }
               className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300"
             >
               Mark correct
@@ -164,6 +174,7 @@ function ScoringContent({ code }: { code: string }) {
                   raw={entry?.raw}
                   points={entry?.points}
                   longGameEnabled={quiz.longGameEnabled}
+                  longGameMaxPoints={quiz.longGameMaxPoints}
                   isLocked={longGameResult?.correctRoundPosition != null}
                   lockedRoundPosition={longGameResult?.correctRoundPosition}
                   lockedPoints={longGameResult?.pointsAwarded}
