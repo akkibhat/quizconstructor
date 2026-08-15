@@ -2,7 +2,9 @@
 
 import { use } from "react";
 
+import { LeaderboardView } from "@/components/LeaderboardView";
 import { SlideView } from "@/components/SlideView";
+import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
 import { useLiveState } from "@/lib/hooks/useLiveState";
 import { useQuizByCode } from "@/lib/hooks/useQuizByCode";
 import { useSlideList } from "@/lib/hooks/useSlideList";
@@ -14,6 +16,7 @@ function DisplayContent({ code }: { code: string }) {
   const quiz = useQuizByCode(code);
   const slides = useSlideList(quiz);
   const liveState = useLiveState(quiz?.id);
+  const leaderboard = useLeaderboardTotals(quiz?.id);
 
   if (quiz === undefined) {
     return <p className="text-2xl text-neutral-500">Loading…</p>;
@@ -39,10 +42,10 @@ function DisplayContent({ code }: { code: string }) {
   }
 
   if (liveState.mode === "leaderboard") {
-    // Full progressive-reveal leaderboard arrives with the Leaderboard
-    // build step - this placeholder just keeps Display from breaking if
-    // the host switches modes before that's built.
-    return <p className="text-4xl text-neutral-100">Leaderboard</p>;
+    if (leaderboard === undefined) {
+      return <p className="text-2xl text-neutral-500">Loading…</p>;
+    }
+    return <LeaderboardView entries={leaderboard} revealStage={liveState.leaderboardRevealStage} />;
   }
 
   return <SlideView slide={slides[liveState.slideIndex]} />;

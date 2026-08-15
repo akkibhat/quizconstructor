@@ -2,14 +2,16 @@
 
 import { use, useEffect, useRef, useState } from "react";
 
+import { LeaderboardView } from "@/components/LeaderboardView";
 import { RequireAuth } from "@/components/RequireAuth";
 import { SlideView } from "@/components/SlideView";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
 import { useLiveState } from "@/lib/hooks/useLiveState";
 import { useMediaUrl } from "@/lib/hooks/useMediaUrl";
 import { useQuizByCode } from "@/lib/hooks/useQuizByCode";
 import { useSlideList } from "@/lib/hooks/useSlideList";
-import { goNext, goPrev, setLiveMode, startQuiz } from "@/lib/liveState";
+import { goNext, goPrev, setLeaderboardRevealStage, setLiveMode, startQuiz } from "@/lib/liveState";
 import type { AudioPlayMode } from "@/lib/types/question";
 
 /**
@@ -79,11 +81,32 @@ function ControllerContent({ code }: { code: string }) {
   const quiz = useQuizByCode(code);
   const slides = useSlideList(quiz);
   const liveState = useLiveState(quiz?.id);
+  const leaderboard = useLeaderboardTotals(quiz?.id);
 
-  // Arrow-key shortcuts, mirroring the Next/Previous buttons below.
+  // Arrow-key shortcuts. In presenter mode they move between slides; in
+  // leaderboard mode the same two keys step the progressive reveal
+  // forward/backward instead, mirroring whichever button row is showing.
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (!quiz || !slides || !liveState || !user) return;
+
+      if (liveState.mode === "leaderboard") {
+        if (event.key === "ArrowRight") {
+          setLeaderboardRevealStage(
+            quiz.id,
+            Math.min(liveState.leaderboardRevealStage + 1, 3) as 0 | 1 | 2 | 3,
+            user.uid
+          );
+        } else if (event.key === "ArrowLeft") {
+          setLeaderboardRevealStage(
+            quiz.id,
+            Math.max(liveState.leaderboardRevealStage - 1, 0) as 0 | 1 | 2 | 3,
+            user.uid
+          );
+        }
+        return;
+      }
+
       if (event.key === "ArrowRight") {
         goNext(quiz.id, liveState.slideIndex, slides.length, user.uid);
       } else if (event.key === "ArrowLeft") {
@@ -117,6 +140,56 @@ function ControllerContent({ code }: { code: string }) {
         >
           Start Quiz
         </button>
+      </div>
+    );
+  }
+
+  if (liveState.mode === "leaderboard") {
+    if (leaderboard === undefined) {
+      return <p className="p-10 text-neutral-400">Loading…</p>;
+    }
+
+    const stage = liveState.leaderboardRevealStage;
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-lg font-medium text-neutral-100">{quiz.title}</h1>
+          <button
+            type="button"
+            onClick={() => setLiveMode(quiz.id, "presenter", user.uid)}
+            className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
+          >
+            Back to Quiz
+          </button>
+        </div>
+
+        <div className="mb-6 flex justify-center rounded border border-neutral-800 bg-black p-8">
+          <LeaderboardView entries={leaderboard} revealStage={stage} />
+        </div>
+
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            disabled={stage === 0}
+            onClick={() =>
+              setLeaderboardRevealStage(quiz.id, (stage - 1) as 0 | 1 | 2 | 3, user.uid)
+            }
+            className="rounded border border-neutral-700 px-4 py-2 text-neutral-300 disabled:opacity-30"
+          >
+            ← Reveal less
+          </button>
+          <button
+            type="button"
+            disabled={stage === 3}
+            onClick={() =>
+              setLeaderboardRevealStage(quiz.id, (stage + 1) as 0 | 1 | 2 | 3, user.uid)
+            }
+            className="rounded bg-neutral-100 px-4 py-2 font-medium text-neutral-900 disabled:opacity-30"
+          >
+            Reveal next →
+          </button>
+          <span className="text-xs text-neutral-600">(or use arrow keys)</span>
+        </div>
       </div>
     );
   }
