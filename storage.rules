@@ -2,9 +2,41 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Default deny-all. Real rules are written once quiz media exists (see build plan).
-    match /{allPaths=**} {
-      allow read, write: if false;
+
+    function isHostOfQuiz(quizId) {
+      return request.auth != null
+        && request.auth.uid ==
+          firestore.get(/databases/(default)/documents/quizzes/$(quizId)).data.hostUid;
+    }
+
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function isValidAudio() {
+      return request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+    }
+
+    // /quizzes/{quizId}/questions/{questionId}/image.<ext> or audio.<ext>
+    match /quizzes/{quizId}/questions/{questionId}/{fileName} {
+      allow read: if true;
+      allow delete: if isHostOfQuiz(quizId);
+      allow create, update: if isHostOfQuiz(quizId)
+        && (
+          (fileName.matches('image\\..*') && isValidImage())
+          || (fileName.matches('audio\\..*') && isValidAudio())
+        );
+    }
+
+    // /quizzes/{quizId}/rounds/{roundId}/longgame-image.<ext>
+    match /quizzes/{quizId}/rounds/{roundId}/{fileName} {
+      allow read: if true;
+      allow delete: if isHostOfQuiz(quizId);
+      allow create, update: if isHostOfQuiz(quizId)
+        && fileName.matches('longgame-image\\..*')
+        && isValidImage();
     }
   }
 }

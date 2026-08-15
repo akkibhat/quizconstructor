@@ -1,10 +1,94 @@
 rules_version = '2';
 
+// Access model (see the build plan for the full reasoning):
+//
+// - quizCodes and quizzes both allow `get` (single-document read) by
+//   anyone, but not `list` (query/enumerate) except by the host. You can
+//   only reach a specific quiz by already knowing its code or its
+//   Firestore ID - both are effectively unguessable random strings, so
+//   allowing `get` doesn't expose anything by itself.
+// - Everything under a quiz (rounds, questions, teams, scores, longGame,
+//   liveState) is readable by anyone who reached the quiz (same
+//   reasoning), but only writable by the quiz's own host.
+//
+// Known v1 tradeoff: since Display needs full round/question content to
+// build its slide list client-side, someone with the code and devtools
+// could technically read ahead of the current slide. Acceptable for a
+// casual quiz night - not engineered around.
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny-all. Real rules are written once quiz data exists (see build plan).
-    match /{document=**} {
-      allow read, write: if false;
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isHostOfQuiz(quizId) {
+      return isSignedIn()
+        && request.auth.uid == get(/databases/$(database)/documents/quizzes/$(quizId)).data.hostUid;
+    }
+
+    match /quizCodes/{code} {
+      allow get: if true;
+      allow list: if false;
+      // Codes are created once alongside their quiz (see createQuiz in
+      // lib/quizzes.ts) and never change afterwards.
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    match /quizzes/{quizId} {
+      allow get: if true;
+      allow list: if isSignedIn() && request.auth.uid == resource.data.hostUid;
+      allow create: if isSignedIn() && request.resource.data.hostUid == request.auth.uid;
+      allow update, delete: if isHostOfQuiz(quizId);
+
+      match /rounds/{roundId} {
+        allow read: if true;
+        allow write: if isHostOfQuiz(quizId);
+
+        match /questions/{questionId} {
+          allow read: if true;
+          allow write: if isHostOfQuiz(quizId);
+        }
+      }
+
+      match /teams/{teamId} {
+        allow read: if true;
+        allow delete: if isHostOfQuiz(quizId);
+
+        // Team picks can only be written while the quiz is still in
+        // "setup" (locks them in once the quiz goes live), and must pick
+        // exactly the configured number of double-points rounds - or
+        // none, if double points isn't enabled for this quiz.
+        allow create, update: if isHostOfQuiz(quizId)
+          && get(/databases/$(database)/documents/quizzes/$(quizId)).data.status == 'setup'
+          && (
+            (
+              get(/databases/$(database)/documents/quizzes/$(quizId)).data.doublePointsEnabled == true
+              && request.resource.data.doubleRoundPicks.size()
+                == get(/databases/$(database)/documents/quizzes/$(quizId)).data.doublePointsPicksPerTeam
+            )
+            || (
+              get(/databases/$(database)/documents/quizzes/$(quizId)).data.doublePointsEnabled == false
+              && request.resource.data.doubleRoundPicks.size() == 0
+            )
+          );
+      }
+
+      match /scores/{roundId} {
+        allow read: if true;
+        allow write: if isHostOfQuiz(quizId);
+      }
+
+      match /longGame/{teamId} {
+        allow read: if true;
+        allow write: if isHostOfQuiz(quizId);
+      }
+
+      match /liveState/{stateDoc} {
+        allow read: if true;
+        allow write: if isHostOfQuiz(quizId);
+      }
     }
   }
 }
