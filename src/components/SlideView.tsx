@@ -64,12 +64,22 @@ export function SlideView({ slide }: { slide: Slide | undefined }) {
       );
 
     case "list-prompt":
-      return <p className="max-w-4xl text-center text-4xl text-neutral-100">{slide.prompt}</p>;
+      return (
+        <div className="flex flex-col items-center gap-8">
+          <h2 className="text-2xl tracking-widest text-sky-400 uppercase">The Gauntlet</h2>
+          <p className="max-w-4xl text-center text-4xl text-neutral-100">{slide.prompt}</p>
+        </div>
+      );
 
     case "list-answer":
       return (
-        <div className="max-h-[80vh] max-w-4xl overflow-y-auto whitespace-pre-wrap text-center text-2xl text-neutral-100">
-          {slide.answerReference}
+        <div className="flex flex-col items-center gap-6">
+          <h2 className="text-2xl tracking-widest text-sky-400 uppercase">
+            The Gauntlet — Answers
+          </h2>
+          <div className="max-h-[70vh] max-w-4xl overflow-y-auto whitespace-pre-wrap text-center text-2xl text-neutral-100">
+            {slide.answerReference}
+          </div>
         </div>
       );
   }

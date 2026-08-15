@@ -16,11 +16,11 @@ import type { Slide } from "@/lib/types/slide";
  *   round title -> each question (no answer shown) -> Long Game clue
  *   (if enabled) -> "Answers" divider -> each answer, same order as the
  *   questions.
- * A round with roundType "list" (The List - see Round.roundType) instead
- * gets: round title -> its single prompt -> Long Game clue (if enabled) ->
- * its single reveal. One shared prompt/reveal stands in for the usual
- * per-question slides, since it really is one shared question with many
- * answer slots rather than several distinct questions.
+ * A round with roundType "list" (The Gauntlet - see Round.roundType)
+ * instead gets: round title -> its single prompt -> Long Game clue (if
+ * enabled) -> its single reveal. One shared prompt/reveal stands in for
+ * the usual per-question slides, since it really is one shared question
+ * with many answer slots rather than several distinct questions.
  * After every round has run through this, if Long Game is enabled, one
  * final slide reveals the overall Long Game answer.
  *

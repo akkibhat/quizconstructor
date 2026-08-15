@@ -20,9 +20,9 @@ export type Slide =
   // Appears exactly once, after the final round's last answer slide - the
   // one-time reveal of the whole quiz's Long Game solution.
   | { type: "long-game-answer"; answerText: string }
-  // The List round's single shared prompt, shown instead of per-question
+  // The Gauntlet's single shared prompt, shown instead of per-question
   // slides - see Round.roundType.
   | { type: "list-prompt"; roundId: string; prompt: string }
-  // The List round's reveal - the host's stored reference list, shown
+  // The Gauntlet's reveal - the host's stored reference list, shown
   // instead of per-question answer slides.
   | { type: "list-answer"; roundId: string; answerReference: string };

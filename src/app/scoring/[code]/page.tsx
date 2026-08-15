@@ -148,7 +148,7 @@ function ScoringContent({ code }: { code: string }) {
 
       {selectedRound?.roundType === "list" && (
         <p className="mb-4 rounded border border-sky-900 bg-sky-950/30 px-4 py-2 text-sm text-sky-300">
-          List round - raw score is however many answers a team got right in a row before their
+          The Gauntlet - raw score is however many answers a team got right in a row before their
           first miss (not their total correct count).
         </p>
       )}

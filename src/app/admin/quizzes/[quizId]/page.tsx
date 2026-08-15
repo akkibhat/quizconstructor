@@ -55,7 +55,7 @@ function RoundRow({
         {round.title}
         {round.roundType === "list" && (
           <span className="ml-2 rounded border border-sky-800 px-1.5 py-0.5 text-xs text-sky-400">
-            List
+            Gauntlet
           </span>
         )}
       </Link>
@@ -161,7 +161,7 @@ function QuizEditor({ quizId }: { quizId: string }) {
               }}
               className="rounded border border-sky-800 px-3 py-1.5 text-sm text-sky-400"
             >
-              Add List Round
+              Add The Gauntlet
             </button>
           )}
           <button
