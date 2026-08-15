@@ -104,6 +104,9 @@ function Dashboard() {
     <AppShell
       actions={
         <>
+          <Link href="/admin/bank" className={buttonStyles("ghost", "sm")}>
+            Question Bank
+          </Link>
           <Link href="/admin/settings" className={buttonStyles("ghost", "sm")}>
             Settings
           </Link>

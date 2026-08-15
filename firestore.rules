@@ -36,6 +36,15 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    // The host's reusable question bank - categorised pools that quiz
+    // rounds draw from. Top-level and auth-only for exactly the same
+    // reasons as the tiebreak bank above: it isn't scoped to one quiz's
+    // access model, and it's the host's own stock of material rather
+    // than something a room with the code should be able to read ahead in.
+    match /questionBank/{id} {
+      allow read, write: if isSignedIn();
+    }
+
     match /quizCodes/{code} {
       allow get: if true;
       allow list: if false;
