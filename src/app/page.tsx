@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { RequireAuth } from "@/components/RequireAuth";
+import { AppShell, PageHeader, QuizCode, SectionHeading } from "@/components/ui/AppShell";
+import { Button, buttonStyles } from "@/components/ui/Button";
+import { EmptyState, Panel } from "@/components/ui/Panel";
 import { auth } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
@@ -14,14 +17,15 @@ import type { Quiz } from "@/lib/types/quiz";
 
 // The live, code-gated views for a quiz, with host-friendly labels
 // (rather than the internal route names) - this is the "what pages are
-// available" quick-access row for each quiz on the dashboard.
+// available" quick-access row for each quiz on the dashboard. "Run Quiz"
+// is marked primary because it's the one you reach for on the night.
 function liveLinksFor(code: string) {
   return [
-    { label: "Team Setup", href: `/team-setup/${code}` },
-    { label: "Run Quiz", href: `/control/${code}` },
-    { label: "Projector", href: `/display/${code}` },
-    { label: "Scoring", href: `/scoring/${code}` },
-    { label: "Leaderboard", href: `/leaderboard/${code}` },
+    { label: "Run Quiz", href: `/control/${code}`, primary: true },
+    { label: "Projector", href: `/display/${code}`, primary: false },
+    { label: "Scoring", href: `/scoring/${code}`, primary: false },
+    { label: "Teams", href: `/team-setup/${code}`, primary: false },
+    { label: "Leaderboard", href: `/leaderboard/${code}`, primary: false },
   ];
 }
 
@@ -44,54 +48,50 @@ function QuizRow({
   }
 
   return (
-    <li className="rounded border border-neutral-800 bg-neutral-900 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <Link href={`/admin/quizzes/${quiz.id}`} className="text-lg text-neutral-100 hover:underline">
+    <Panel as="li" className="p-5">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <Link
+          href={`/admin/quizzes/${quiz.id}`}
+          className="font-display min-w-0 text-xl font-semibold text-ink transition-colors hover:text-flame"
+        >
           {quiz.title}
         </Link>
-        <span className="font-mono text-sm text-neutral-500">{quiz.code}</span>
+        <QuizCode code={quiz.code} />
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         {liveLinksFor(quiz.code).map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className="rounded border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 hover:border-neutral-500"
+            className={buttonStyles(link.primary ? "primary" : "secondary", "sm")}
           >
             {link.label}
           </Link>
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
-        <Link
-          href={`/admin/quizzes/${quiz.id}`}
-          className="rounded border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400"
-        >
+      <div className="flex items-center gap-2 border-t border-edge pt-3">
+        <Link href={`/admin/quizzes/${quiz.id}`} className={buttonStyles("ghost", "sm")}>
           Edit
         </Link>
-        <button
-          type="button"
-          disabled={isDuplicating}
-          onClick={handleDuplicate}
-          className="rounded border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 disabled:opacity-50"
-        >
+        <Button variant="ghost" size="sm" disabled={isDuplicating} onClick={handleDuplicate}>
           {isDuplicating ? "Duplicating…" : "Duplicate"}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto text-danger hover:text-danger"
           onClick={async () => {
             if (await confirmDialog(`Delete "${quiz.title}"?`)) {
               archiveQuiz(quiz.id);
             }
           }}
-          className="rounded border border-red-900 px-2.5 py-1 text-xs text-red-400"
         >
           Delete
-        </button>
+        </Button>
       </div>
-    </li>
+    </Panel>
   );
 }
 
@@ -101,39 +101,37 @@ function Dashboard() {
   const { confirmDialog, dialog } = useConfirmDialog();
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-neutral-100">QuizConstructor</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/admin/settings"
-            className="rounded border border-neutral-700 px-3 py-2 text-sm text-neutral-300"
-          >
+    <AppShell
+      actions={
+        <>
+          <Link href="/admin/settings" className={buttonStyles("ghost", "sm")}>
             Settings
           </Link>
-          <button
-            type="button"
-            onClick={() => signOut(auth)}
-            className="rounded border border-neutral-700 px-3 py-2 text-sm text-neutral-300"
-          >
+          <Button variant="secondary" size="sm" onClick={() => signOut(auth)}>
             Sign Out
-          </button>
-        </div>
-      </div>
+          </Button>
+        </>
+      }
+    >
+      <PageHeader
+        eyebrow="Quiz night"
+        title="Your quizzes"
+        description="Pick a quiz to edit its rounds, or jump straight to a live view for the night."
+      />
 
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-lg font-medium text-neutral-100">My Quizzes</h2>
-        <Link
-          href="/admin/quizzes/new"
-          className="rounded bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900"
-        >
-          New Quiz
-        </Link>
-      </div>
+      <SectionHeading
+        actions={
+          <Link href="/admin/quizzes/new" className={buttonStyles("primary", "md")}>
+            New Quiz
+          </Link>
+        }
+      >
+        All quizzes
+      </SectionHeading>
 
-      {quizzes === undefined && <p className="text-neutral-400">Loading…</p>}
+      {quizzes === undefined && <p className="text-sm text-ink-muted">Loading…</p>}
       {quizzes?.length === 0 && (
-        <p className="text-neutral-400">No quizzes yet — create your first one to get started.</p>
+        <EmptyState>No quizzes yet — create your first one to get started.</EmptyState>
       )}
 
       <ul className="space-y-3">
@@ -143,7 +141,7 @@ function Dashboard() {
       </ul>
 
       {dialog}
-    </div>
+    </AppShell>
   );
 }
 

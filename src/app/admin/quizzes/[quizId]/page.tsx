@@ -6,6 +6,10 @@ import { use } from "react";
 
 import { CodeGateLoading, NotFoundPanel } from "@/components/CodeGateStatus";
 import { RequireAuth } from "@/components/RequireAuth";
+import { AppShell, BackLink, PageHeader, QuizCode, SectionHeading } from "@/components/ui/AppShell";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { EmptyState, Panel } from "@/components/ui/Panel";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useQuestions } from "@/lib/hooks/useQuestions";
 import { useQuiz } from "@/lib/hooks/useQuiz";
@@ -54,46 +58,41 @@ function RoundRow({
   }
 
   return (
-    <li className="flex items-center justify-between rounded border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <Link
-        href={`/admin/quizzes/${quizId}/rounds/${round.id}`}
-        className="text-neutral-100 hover:underline"
-      >
-        {round.title}
-        {round.roundType === "list" && (
-          <span className="ml-2 rounded border border-sky-800 px-1.5 py-0.5 text-xs text-sky-400">
-            Gauntlet
-          </span>
-        )}
-      </Link>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
+    <Panel as="li" className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="font-display w-6 shrink-0 text-lg font-bold text-ink-muted tabular-nums">
+          {index + 1}
+        </span>
+        <Link
+          href={`/admin/quizzes/${quizId}/rounds/${round.id}`}
+          className="flex min-w-0 items-center gap-2 text-ink transition-colors hover:text-flame"
+        >
+          <span className="truncate">{round.title}</span>
+          {round.roundType === "list" && <Badge tone="mint">Gauntlet</Badge>}
+        </Link>
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <Button
+          size="sm"
           disabled={!canMoveUp}
           onClick={() => swapRoundOrder(quizId, round, realRounds[index - 1])}
-          className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-30"
           aria-label="Move round up"
         >
           ↑
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          size="sm"
           disabled={!canMoveDown}
           onClick={() => swapRoundOrder(quizId, round, realRounds[index + 1])}
-          className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-30"
           aria-label="Move round down"
         >
           ↓
-        </button>
-        <button
-          type="button"
-          onClick={handleDelete}
-          className="rounded border border-red-900 px-2 py-1 text-xs text-red-400"
-        >
+        </Button>
+        <Button variant="danger" size="sm" onClick={handleDelete}>
           Delete
-        </button>
+        </Button>
       </div>
-    </li>
+    </Panel>
   );
 }
 
@@ -119,23 +118,22 @@ function LiveLinksSection({ code }: { code: string }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
-    <div className="mb-8">
-      <h2 className="mb-3 text-lg font-medium text-neutral-100">Live Links</h2>
+    <div className="mb-10">
+      <SectionHeading>Live Links</SectionHeading>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {liveLinksFor(code).map((link) => (
-          <div
+          <Link
             key={link.href}
-            className="flex flex-col items-center gap-2 rounded border border-neutral-800 bg-neutral-900 p-3"
+            href={link.href}
+            className="flex flex-col items-center gap-2.5 rounded-panel border border-edge bg-surface p-3.5 transition-colors hover:border-flame/60"
           >
             {origin && (
-              <div className="rounded bg-white p-1.5">
-                <QRCodeSVG value={`${origin}${link.href}`} size={80} />
+              <div className="rounded-chip bg-ink p-1.5">
+                <QRCodeSVG value={`${origin}${link.href}`} size={80} bgColor="#f9f0dd" fgColor="#0a2b2c" />
               </div>
             )}
-            <Link href={link.href} className="text-sm text-neutral-200 hover:underline">
-              {link.label}
-            </Link>
-          </div>
+            <span className="text-sm font-medium text-ink-soft">{link.label}</span>
+          </Link>
         ))}
       </div>
     </div>
@@ -160,36 +158,33 @@ function QuizEditor({ quizId }: { quizId: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <Link
-        href="/"
-        className="mb-4 inline-block text-sm text-neutral-400 hover:text-neutral-200"
-      >
-        ← Back to dashboard
-      </Link>
+    <AppShell>
+      <BackLink href="/">Back to dashboard</BackLink>
 
-      <div className="mb-2 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-neutral-100">{quiz.title}</h1>
-        <span className="rounded border border-neutral-700 px-2 py-1 font-mono text-sm text-neutral-400">
-          {quiz.code}
-        </span>
-      </div>
-      <p className="mb-8 text-sm text-neutral-500">
-        {quiz.doublePointsEnabled &&
-          `Double points enabled (${quiz.doublePointsPicksPerTeam} pick${
-            quiz.doublePointsPicksPerTeam === 1 ? "" : "s"
-          } per team)`}
-      </p>
+      <PageHeader
+        eyebrow="Quiz"
+        title={quiz.title}
+        meta={<QuizCode code={quiz.code} />}
+        description={
+          quiz.doublePointsEnabled
+            ? `Double points enabled — ${quiz.doublePointsPicksPerTeam} pick${
+                quiz.doublePointsPicksPerTeam === 1 ? "" : "s"
+              } per team.`
+            : undefined
+        }
+      />
 
       <LiveLinksSection code={quiz.code} />
 
       {quiz.longGameEnabled && longGameRound && (
         <Link
           href={`/admin/quizzes/${quizId}/rounds/${longGameRound.id}`}
-          className="mb-8 flex items-center justify-between rounded border border-amber-900 bg-amber-950/30 px-4 py-3 hover:border-amber-700"
+          className="mb-10 flex items-center justify-between gap-3 rounded-panel border border-gold/40 bg-gold/8 px-4 py-3.5 transition-colors hover:border-gold"
         >
-          <span className="text-neutral-100">The Long Game</span>
-          <span className="text-xs text-neutral-500">
+          <span className="font-display font-semibold tracking-wide text-gold uppercase">
+            The Long Game
+          </span>
+          <span className="text-xs text-ink-muted">
             {longGameClues === undefined
               ? "…"
               : `${longGameClues.length} of ${realRounds.length} clues`}
@@ -197,42 +192,39 @@ function QuizEditor({ quizId }: { quizId: string }) {
         </Link>
       )}
 
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-medium text-neutral-100">Rounds</h2>
-        <div className="flex items-center gap-2">
-          {!realRounds.some((round) => round.roundType === "list") && (
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await addListRound(quizId, realRounds);
-                } catch (error) {
-                  if (error instanceof ListRoundAlreadyExistsError) {
-                    await alertDialog(error.message);
-                    return;
+      <SectionHeading
+        actions={
+          <>
+            {!realRounds.some((round) => round.roundType === "list") && (
+              <Button
+                size="md"
+                className="border-mint/45 text-mint hover:border-mint hover:text-mint"
+                onClick={async () => {
+                  try {
+                    await addListRound(quizId, realRounds);
+                  } catch (error) {
+                    if (error instanceof ListRoundAlreadyExistsError) {
+                      await alertDialog(error.message);
+                      return;
+                    }
+                    throw error;
                   }
-                  throw error;
-                }
-              }}
-              className="rounded border border-sky-800 px-3 py-1.5 text-sm text-sky-400"
-            >
-              Add The Gauntlet
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => addRound(quizId, realRounds)}
-            className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-900"
-          >
-            Add Round
-          </button>
-        </div>
-      </div>
+                }}
+              >
+                Add The Gauntlet
+              </Button>
+            )}
+            <Button variant="primary" onClick={() => addRound(quizId, realRounds)}>
+              Add Round
+            </Button>
+          </>
+        }
+      >
+        Rounds
+      </SectionHeading>
 
       {realRounds.length === 0 ? (
-        <p className="rounded border border-dashed border-neutral-800 px-4 py-8 text-center text-sm text-neutral-500">
-          No rounds yet — add your first one to start building this quiz.
-        </p>
+        <EmptyState>No rounds yet — add your first one to start building this quiz.</EmptyState>
       ) : (
         <ul className="space-y-2">
           {realRounds.map((round, index) => (
@@ -251,7 +243,7 @@ function QuizEditor({ quizId }: { quizId: string }) {
       )}
 
       {dialog}
-    </div>
+    </AppShell>
   );
 }
 

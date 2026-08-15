@@ -6,6 +6,11 @@ import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { LeaderboardView } from "@/components/LeaderboardView";
 import { RequireAuth } from "@/components/RequireAuth";
 import { SlideView } from "@/components/SlideView";
+import { AppShell, PageHeader } from "@/components/ui/AppShell";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { fieldStyles, fieldStylesCompact } from "@/components/ui/Field";
+import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
 import { useLiveState } from "@/lib/hooks/useLiveState";
@@ -60,35 +65,30 @@ function AudioControls({
   }
 
   return (
-    <div className="flex items-center gap-3 rounded border border-neutral-800 bg-neutral-900 px-4 py-2">
+    <div className="flex items-center gap-2.5 rounded-panel border border-edge bg-surface px-4 py-2.5">
       <audio
         ref={audioRef}
         src={audioUrl}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       />
-      <button
-        type="button"
+      <Button
+        variant="primary"
         onClick={() => (isPlaying ? audioRef.current?.pause() : audioRef.current?.play())}
-        className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-900"
       >
         {isPlaying ? "Pause" : "Play"}
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
         onClick={() => {
           if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
           }
         }}
-        className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
       >
         Stop
-      </button>
-      <span className="text-xs text-neutral-500">
-        {audioPlayMode === "autoplay" ? "Autoplay" : "Manual"}
-      </span>
+      </Button>
+      <Badge className="ml-auto">{audioPlayMode === "autoplay" ? "Autoplay" : "Manual"}</Badge>
     </div>
   );
 }
@@ -120,17 +120,23 @@ function TieAlertBanner({
   return (
     <div className="mb-6 space-y-2">
       {tieGroups.map((group, index) => (
-        <div key={index} className="rounded border border-red-800 bg-red-950/30 p-3 text-sm">
-          <p className="text-red-300">
-            Tie for {group.position === "top" ? "1st/2nd/3rd" : "2nd-to-last"}:{" "}
-            {group.teams.map((team) => team.name).join(", ")} (all {group.score} pts)
+        <div
+          key={index}
+          className="rounded-panel border border-danger/50 bg-danger/10 p-4 text-sm"
+        >
+          <p className="text-ink">
+            <span className="font-display font-semibold tracking-wide text-danger uppercase">
+              Tie for {group.position === "top" ? "1st/2nd/3rd" : "2nd-to-last"}
+            </span>
+            <br />
+            {group.teams.map((team) => team.name).join(", ")} — all {group.score} pts
           </p>
           {resolvingIndex === index ? (
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-3">
               <select
                 value={selectedQuestionId}
                 onChange={(event) => setSelectedQuestionId(event.target.value)}
-                className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-neutral-100"
+                className={fieldStyles}
               >
                 <option value="">Pick a tiebreak question…</option>
                 {tiebreakQuestions?.map((question) => (
@@ -139,26 +145,28 @@ function TieAlertBanner({
                   </option>
                 ))}
               </select>
-              <div className="flex items-center gap-4 text-neutral-300">
-                <label className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-4 text-ink-soft">
+                <label className="flex cursor-pointer items-center gap-1.5">
                   <input
                     type="radio"
                     checked={mode === "app-computes"}
                     onChange={() => setMode("app-computes")}
+                    className="accent-flame"
                   />
                   App computes winner
                 </label>
-                <label className="flex items-center gap-1">
+                <label className="flex cursor-pointer items-center gap-1.5">
                   <input
                     type="radio"
                     checked={mode === "manual"}
                     onChange={() => setMode("manual")}
+                    className="accent-flame"
                   />
                   I&apos;ll judge manually
                 </label>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 disabled={!selectedQuestionId}
                 onClick={() => {
                   const question = tiebreakQuestions?.find((q) => q.id === selectedQuestionId);
@@ -175,19 +183,14 @@ function TieAlertBanner({
                   setResolvingIndex(null);
                   setSelectedQuestionId("");
                 }}
-                className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 disabled:opacity-50"
               >
                 Start Tiebreak
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setResolvingIndex(index)}
-              className="mt-2 rounded border border-red-700 px-3 py-1 text-xs text-red-300"
-            >
+            <Button variant="danger" size="sm" className="mt-3" onClick={() => setResolvingIndex(index)}>
               Resolve Tie
-            </button>
+            </Button>
           )}
         </div>
       ))}
@@ -216,88 +219,88 @@ function TiebreakPanel({
       : null;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-lg font-medium text-neutral-100">Tiebreak</h1>
-        <button
-          type="button"
-          onClick={() => endTiebreak(quizId, hostUid)}
-          className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
-        >
-          Back to Leaderboard
-        </button>
-      </div>
+    <AppShell
+      actions={
+        <Button onClick={() => endTiebreak(quizId, hostUid)}>Back to Leaderboard</Button>
+      }
+    >
+      <PageHeader
+        eyebrow={`${tiebreak.contestedPosition === "top" ? "1st / 2nd / 3rd" : "2nd-to-last"} tiebreak`}
+        title="Tiebreak"
+      />
 
-      <div className="mb-6 rounded border border-neutral-800 bg-black p-6 text-center">
-        <p className="mb-2 text-xs tracking-widest text-neutral-500 uppercase">
-          {tiebreak.contestedPosition === "top" ? "1st / 2nd / 3rd" : "2nd-to-last"} tiebreak
+      <div className="tv-screen mb-6 rounded-screen border-2 border-flame/30 p-8 text-center">
+        <p className="font-display text-2xl font-semibold text-balance text-ink">
+          {tiebreak.questionText}
         </p>
-        <p className="text-xl text-neutral-100">{tiebreak.questionText}</p>
         {tiebreak.revealed && (
-          <p className="mt-3 text-lg text-emerald-400">Answer: {tiebreak.correctAnswer}</p>
+          <p className="font-display mt-4 text-xl font-bold text-gold">
+            Answer: {tiebreak.correctAnswer}
+          </p>
         )}
       </div>
 
       {tiebreak.mode === "app-computes" ? (
         <div className="space-y-2">
-          {contestedTeams.map((team) => (
-            <div
-              key={team.id}
-              className={`flex items-center justify-between rounded border p-3 ${
-                winnerId === team.id
-                  ? "border-emerald-700 bg-emerald-950/30"
-                  : "border-neutral-800 bg-neutral-900"
-              }`}
-            >
-              <span className="text-neutral-100">
-                {team.name}
-                {winnerId === team.id && (
-                  <span className="ml-2 text-xs text-emerald-400">Winner</span>
+          {contestedTeams.map((team) => {
+            const isWinner = winnerId === team.id;
+            return (
+              <div
+                key={team.id}
+                className={cn(
+                  "flex items-center justify-between gap-3 rounded-panel border p-3",
+                  isWinner ? "border-flame bg-flame/15" : "border-edge bg-surface"
                 )}
-              </span>
-              <input
-                type="number"
-                defaultValue={tiebreak.guesses[team.id] ?? ""}
-                onBlur={(event) => {
-                  const value = Number(event.target.value);
-                  if (!Number.isNaN(value)) {
-                    setTiebreakGuess(quizId, hostUid, tiebreak, team.id, value);
-                  }
-                }}
-                className="w-32 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-neutral-100"
-                placeholder="Guess"
-              />
-            </div>
-          ))}
+              >
+                <span className="flex items-center gap-2 text-ink">
+                  {team.name}
+                  {isWinner && <Badge tone="flame">Winner</Badge>}
+                </span>
+                <input
+                  type="number"
+                  defaultValue={tiebreak.guesses[team.id] ?? ""}
+                  onBlur={(event) => {
+                    const value = Number(event.target.value);
+                    if (!Number.isNaN(value)) {
+                      setTiebreakGuess(quizId, hostUid, tiebreak, team.id, value);
+                    }
+                  }}
+                  className={cn(fieldStylesCompact, "w-32 tabular-nums")}
+                  placeholder="Guess"
+                />
+              </div>
+            );
+          })}
           {!tiebreak.revealed && (
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="lg"
+              className="mt-2"
               onClick={() => revealTiebreak(quizId, hostUid, tiebreak)}
-              className="mt-2 rounded bg-neutral-100 px-4 py-2 font-medium text-neutral-900"
             >
               Reveal Winner
-            </button>
+            </Button>
           )}
         </div>
       ) : (
         <div>
-          <ul className="mb-4 space-y-1 text-sm text-neutral-400">
+          <ul className="mb-4 space-y-1 text-sm text-ink-muted">
             {contestedTeams.map((team) => (
               <li key={team.id}>{team.name}</li>
             ))}
           </ul>
           {!tiebreak.revealed && (
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="lg"
               onClick={() => revealTiebreak(quizId, hostUid, tiebreak)}
-              className="rounded bg-neutral-100 px-4 py-2 font-medium text-neutral-900"
             >
               Reveal Answer
-            </button>
+            </Button>
           )}
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }
 
@@ -367,16 +370,19 @@ function ControllerContent({ code }: { code: string }) {
 
   if (liveState === null) {
     return (
-      <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <h1 className="mb-6 text-2xl font-semibold text-neutral-100">{quiz.title}</h1>
-        <button
-          type="button"
-          onClick={() => startQuiz(quiz.id, user.uid)}
-          className="rounded bg-neutral-100 px-6 py-3 font-medium text-neutral-900"
-        >
-          Start Quiz
-        </button>
-      </div>
+      <AppShell>
+        <div className="mx-auto max-w-md py-20 text-center">
+          <p className="mb-2 text-xs font-semibold tracking-[0.2em] text-flame uppercase">
+            Ready when you are
+          </p>
+          <h1 className="font-display mb-8 text-4xl font-bold text-balance text-ink">
+            {quiz.title}
+          </h1>
+          <Button variant="primary" size="lg" onClick={() => startQuiz(quiz.id, user.uid)}>
+            Start Quiz
+          </Button>
+        </div>
+      </AppShell>
     );
   }
 
@@ -391,21 +397,20 @@ function ControllerContent({ code }: { code: string }) {
 
   if (liveState.mode === "drinks-break") {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-10 text-center">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-lg font-medium text-neutral-100">{quiz.title}</h1>
-          <button
-            type="button"
-            onClick={() => setLiveMode(quiz.id, "presenter", user.uid)}
-            className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
-          >
+      <AppShell
+        actions={
+          <Button variant="primary" onClick={() => setLiveMode(quiz.id, "presenter", user.uid)}>
             Back to Quiz
-          </button>
+          </Button>
+        }
+      >
+        <PageHeader eyebrow="On screen" title={quiz.title} />
+        <div className="tv-screen flex min-h-[220px] items-center justify-center rounded-screen border-2 border-flame/30 p-8">
+          <h2 className="font-display text-4xl font-bold tracking-wide text-ink uppercase">
+            Drinks Break
+          </h2>
         </div>
-        <div className="flex min-h-[200px] items-center justify-center rounded border border-neutral-800 bg-black p-8">
-          <h2 className="text-3xl font-bold text-neutral-100">Drinks Break</h2>
-        </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -416,17 +421,15 @@ function ControllerContent({ code }: { code: string }) {
 
     const stage = liveState.leaderboardRevealStage;
     return (
-      <div className="mx-auto max-w-2xl px-4 py-10">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-lg font-medium text-neutral-100">{quiz.title}</h1>
-          <button
-            type="button"
-            onClick={() => setLiveMode(quiz.id, "presenter", user.uid)}
-            className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
-          >
+      <AppShell
+        width="wide"
+        actions={
+          <Button variant="primary" onClick={() => setLiveMode(quiz.id, "presenter", user.uid)}>
             Back to Quiz
-          </button>
-        </div>
+          </Button>
+        }
+      >
+        <PageHeader eyebrow="On screen" title={quiz.title} />
 
         {stage === 3 && (
           <TieAlertBanner
@@ -437,53 +440,52 @@ function ControllerContent({ code }: { code: string }) {
           />
         )}
 
-        <div className="mb-6 flex justify-center rounded border border-neutral-800 bg-black p-8">
+        <div className="tv-screen mb-6 flex justify-center rounded-screen border-2 border-flame/30 p-8">
           <LeaderboardView entries={leaderboard} revealStage={stage} />
         </div>
 
-        <div className="flex items-center justify-center gap-3">
-          <button
-            type="button"
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button
+            size="lg"
             disabled={stage === 0}
             onClick={() =>
               setLeaderboardRevealStage(quiz.id, (stage - 1) as 0 | 1 | 2 | 3, user.uid)
             }
-            className="rounded border border-neutral-700 px-4 py-2 text-neutral-300 disabled:opacity-30"
           >
             ← Reveal less
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
             disabled={stage === 3}
             onClick={() =>
               setLeaderboardRevealStage(quiz.id, (stage + 1) as 0 | 1 | 2 | 3, user.uid)
             }
-            className="rounded bg-neutral-100 px-4 py-2 font-medium text-neutral-900 disabled:opacity-30"
           >
             Reveal next →
-          </button>
-          <span className="text-xs text-neutral-600">(or use arrow keys)</span>
+          </Button>
+          <span className="text-xs text-ink-muted">(or use arrow keys)</span>
         </div>
 
-        <div className="mt-3 flex items-center justify-center gap-3">
-          <button
-            type="button"
+        <div className="mt-4 flex items-center justify-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
             disabled={stage === 0}
             onClick={() => setLeaderboardRevealStage(quiz.id, 0, user.uid)}
-            className="text-xs text-neutral-500 hover:text-neutral-300 disabled:opacity-30"
           >
             Hide all
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             disabled={stage === 3}
             onClick={() => setLeaderboardRevealStage(quiz.id, 3, user.uid)}
-            className="text-xs text-neutral-500 hover:text-neutral-300 disabled:opacity-30"
           >
             Show all now (skip the reveal)
-          </button>
+          </Button>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -491,33 +493,37 @@ function ControllerContent({ code }: { code: string }) {
   const nextSlide = slides[liveState.slideIndex + 1];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-medium text-neutral-100">{quiz.title}</h1>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setLiveMode(quiz.id, "drinks-break", user.uid)}
-            className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
-          >
+    <AppShell
+      width="wide"
+      actions={
+        <>
+          <Button onClick={() => setLiveMode(quiz.id, "drinks-break", user.uid)}>
             Drinks Break
-          </button>
-          <button
-            type="button"
-            onClick={() => setLiveMode(quiz.id, "leaderboard", user.uid)}
-            className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
-          >
-            Go to Leaderboard
-          </button>
+          </Button>
+          <Button onClick={() => setLiveMode(quiz.id, "leaderboard", user.uid)}>
+            Leaderboard
+          </Button>
+        </>
+      }
+    >
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div>
+          <p className="mb-1 text-xs font-semibold tracking-[0.2em] text-flame uppercase">
+            On screen
+          </p>
+          <h1 className="font-display text-2xl font-semibold text-ink">{quiz.title}</h1>
         </div>
+        <span className="font-mono text-sm text-ink-muted tabular-nums">
+          Slide {liveState.slideIndex + 1} / {slides.length}
+        </span>
       </div>
 
-      <div className="mb-2 text-xs text-neutral-500">
-        Slide {liveState.slideIndex + 1} of {slides.length}
-      </div>
-
-      <div className="mb-4 flex min-h-[240px] items-center justify-center rounded border border-neutral-800 bg-black p-8">
-        <SlideView slide={currentSlide} />
+      {/* Scaled down so the projector's real slide layout stays readable
+          here without dwarfing the controls underneath it. */}
+      <div className="tv-screen mb-4 flex min-h-[260px] items-center justify-center overflow-hidden rounded-screen border-2 border-flame/30 p-8">
+        <div className="origin-center scale-[0.55]">
+          <SlideView slide={currentSlide} />
+        </div>
       </div>
 
       {currentSlide &&
@@ -532,35 +538,38 @@ function ControllerContent({ code }: { code: string }) {
           </div>
         )}
 
-      <div className="mb-6 flex items-center gap-3">
-        <button
-          type="button"
+      <div className="mb-8 flex flex-wrap items-center gap-3">
+        <Button
+          size="lg"
           disabled={liveState.slideIndex === 0}
           onClick={() => goPrev(quiz.id, liveState.slideIndex, user.uid)}
-          className="rounded border border-neutral-700 px-4 py-2 text-neutral-300 disabled:opacity-30"
         >
           ← Previous
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="primary"
+          size="lg"
           disabled={liveState.slideIndex >= slides.length - 1}
           onClick={() => goNext(quiz.id, liveState.slideIndex, slides.length, user.uid)}
-          className="rounded bg-neutral-100 px-4 py-2 font-medium text-neutral-900 disabled:opacity-30"
         >
           Next →
-        </button>
-        <span className="text-xs text-neutral-600">(or use arrow keys)</span>
+        </Button>
+        <span className="text-xs text-ink-muted">(or use arrow keys)</span>
       </div>
 
       {nextSlide && (
-        <div className="rounded border border-neutral-900 bg-neutral-950 p-4 opacity-60">
-          <p className="mb-2 text-xs text-neutral-500">Next:</p>
-          <div className="origin-top-left scale-75">
-            <SlideView slide={nextSlide} />
+        <div className="rounded-panel border border-edge bg-surface/50 p-4">
+          <p className="mb-2 text-xs font-semibold tracking-[0.2em] text-ink-muted uppercase">
+            Coming up
+          </p>
+          <div className="flex h-24 items-center justify-center overflow-hidden opacity-70">
+            <div className="origin-center scale-[0.32]">
+              <SlideView slide={nextSlide} />
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }
 

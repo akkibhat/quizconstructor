@@ -4,6 +4,11 @@ import { use, useState } from "react";
 
 import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { RequireAuth } from "@/components/RequireAuth";
+import { AppShell, PageHeader, QuizCode } from "@/components/ui/AppShell";
+import { Badge } from "@/components/ui/Badge";
+import { fieldStylesCompact } from "@/components/ui/Field";
+import { EmptyState, Panel } from "@/components/ui/Panel";
+import { cn } from "@/lib/cn";
 import { setQuestionMark } from "@/lib/electronicScoring";
 import { useLongGameResults } from "@/lib/hooks/useLongGameResults";
 import { useQuestionMarks } from "@/lib/hooks/useQuestionMarks";
@@ -19,6 +24,46 @@ import type { Team } from "@/lib/types/team";
 type ScoringMode = "paper" | "electronic";
 
 const BONUS_AMOUNT = 1;
+
+// Colour is doing real work in the marking row - the host is clicking
+// these dozens of times a night and needs to see at a glance which one
+// is set, without reading it. Each tone keeps a fixed meaning: red for
+// nothing awarded, gold for half credit, green for full, orange for the
+// bonus.
+const MARK_TONES = {
+  danger: "border-danger bg-danger/85 text-ink",
+  gold: "border-gold bg-gold/85 text-on-flame",
+  success: "border-success bg-success/85 text-on-flame",
+  flame: "border-flame bg-flame text-on-flame",
+} as const;
+
+/** One toggle in a question's marking row - see MARK_TONES above. */
+function MarkButton({
+  active,
+  tone,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  tone: keyof typeof MARK_TONES;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "min-w-9 rounded-chip border px-2.5 py-1.5 text-xs font-semibold transition-colors",
+        active
+          ? MARK_TONES[tone]
+          : "border-edge-strong text-ink-muted hover:border-ink-muted hover:text-ink-soft"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 /**
  * Reconstructs the "0 / 0.5 / 1 base" and "bonus on/off" button states
@@ -81,58 +126,26 @@ function QuestionMarkRow({
   }
 
   return (
-    <li className="flex items-start justify-between gap-4 rounded border border-neutral-800 bg-neutral-900 p-3">
-      <div className="flex-1">
-        <p className="text-neutral-100">{question.text}</p>
-        <p className="text-sm text-neutral-500">Answer: {question.answer}</p>
+    <Panel as="li" className="flex flex-wrap items-start justify-between gap-3 p-3">
+      <div className="min-w-[12rem] flex-1">
+        <p className="text-ink">{question.text}</p>
+        <p className="mt-0.5 text-sm text-ink-muted">Answer: {question.answer}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <button
-          type="button"
-          onClick={() => selectBase(0)}
-          className={`rounded border px-2 py-1 text-xs ${
-            base === 0
-              ? "border-red-700 bg-red-950 text-red-300"
-              : "border-neutral-700 text-neutral-400"
-          }`}
-        >
+      <div className="flex shrink-0 items-center gap-1.5">
+        <MarkButton active={base === 0} tone="danger" onClick={() => selectBase(0)}>
           0
-        </button>
-        <button
-          type="button"
-          onClick={() => selectBase(0.5)}
-          className={`rounded border px-2 py-1 text-xs ${
-            base === 0.5
-              ? "border-amber-700 bg-amber-950 text-amber-300"
-              : "border-neutral-700 text-neutral-400"
-          }`}
-        >
-          0.5
-        </button>
-        <button
-          type="button"
-          onClick={() => selectBase(1)}
-          className={`rounded border px-2 py-1 text-xs ${
-            base === 1
-              ? "border-emerald-700 bg-emerald-950 text-emerald-300"
-              : "border-neutral-700 text-neutral-400"
-          }`}
-        >
+        </MarkButton>
+        <MarkButton active={base === 0.5} tone="gold" onClick={() => selectBase(0.5)}>
+          ½
+        </MarkButton>
+        <MarkButton active={base === 1} tone="success" onClick={() => selectBase(1)}>
           1
-        </button>
-        <button
-          type="button"
-          onClick={toggleBonus}
-          className={`rounded border px-2 py-1 text-xs ${
-            bonusActive
-              ? "border-purple-700 bg-purple-950 text-purple-300"
-              : "border-neutral-700 text-neutral-400"
-          }`}
-        >
-          Bonus (+{BONUS_AMOUNT})
-        </button>
+        </MarkButton>
+        <MarkButton active={bonusActive} tone="flame" onClick={toggleBonus}>
+          Bonus +{BONUS_AMOUNT}
+        </MarkButton>
       </div>
-    </li>
+    </Panel>
   );
 }
 
@@ -160,11 +173,12 @@ function ElectronicScoringPanel({
             key={team.id}
             type="button"
             onClick={() => setSelectedTeamId(team.id)}
-            className={`rounded border px-3 py-1.5 text-sm ${
+            className={cn(
+              "rounded-chip border px-3 py-1.5 text-sm transition-colors",
               selectedTeamId === team.id
-                ? "border-neutral-100 text-neutral-100"
-                : "border-neutral-700 text-neutral-400"
-            }`}
+                ? "border-flame bg-flame font-semibold text-on-flame"
+                : "border-edge-strong text-ink-muted hover:border-flame/60 hover:text-ink-soft"
+            )}
           >
             {team.name}
           </button>
@@ -173,16 +187,15 @@ function ElectronicScoringPanel({
 
       {selectedTeam && (
         <>
-          <p className="mb-3 text-sm text-neutral-400">
-            Marking <span className="text-neutral-100">{selectedTeam.name}</span>
-            {selectedTeam.doubleRoundPicks.includes(round.id) && (
-              <span className="ml-1 text-xs text-amber-400">2x</span>
-            )}{" "}
-            - running total: <span className="text-neutral-100">{total}</span>
+          <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+            Marking <span className="font-semibold text-ink">{selectedTeam.name}</span>
+            {selectedTeam.doubleRoundPicks.includes(round.id) && <Badge tone="flame">2x</Badge>}
+            <span className="text-ink-muted">— running total:</span>
+            <span className="font-display text-lg font-bold text-flame tabular-nums">{total}</span>
           </p>
 
           {questions === undefined || marks === undefined ? (
-            <p className="text-neutral-500">Loading…</p>
+            <p className="text-sm text-ink-muted">Loading…</p>
           ) : (
             <ul className="space-y-2">
               {questions.map((question) => (
@@ -239,11 +252,13 @@ function TeamScoreRow({
   const isDoubled = team.doubleRoundPicks.includes(selectedRound.id);
 
   return (
-    <tr className="border-t border-neutral-800">
-      <td className="py-2 pr-4 text-neutral-100">
-        {team.name} {isDoubled && <span className="ml-1 text-xs text-amber-400">2x</span>}
+    <tr className="border-t border-edge">
+      <td className="py-2.5 pr-4 text-ink">
+        <span className="flex items-center gap-2">
+          {team.name} {isDoubled && <Badge tone="flame">2x</Badge>}
+        </span>
       </td>
-      <td className="py-2 pr-4">
+      <td className="py-2.5 pr-4">
         <input
           type="number"
           key={selectedRound.id}
@@ -252,10 +267,12 @@ function TeamScoreRow({
             const value = Number(event.target.value) || 0;
             setRoundScore(quizId, selectedRound.id, team.id, value, isDoubled);
           }}
-          className="w-20 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-neutral-100"
+          className={cn(fieldStylesCompact, "w-20 tabular-nums")}
         />
       </td>
-      <td className="py-2 pr-4 text-neutral-400">{points ?? "—"}</td>
+      <td className="font-display py-2.5 pr-4 text-lg font-semibold text-ink-soft tabular-nums">
+        {points ?? "—"}
+      </td>
       {longGameEnabled && (
         <td className="py-2">
           <LongGameMarker
@@ -306,9 +323,9 @@ function LongGameMarker({
       <button
         type="button"
         onClick={() => clearLongGameResult(quizId, teamId)}
-        className="text-xs text-amber-400 hover:underline"
+        className="rounded-chip border border-gold bg-gold/85 px-2.5 py-1.5 text-xs font-semibold text-on-flame transition-opacity hover:opacity-80"
       >
-        ✓ Round {lockedRoundPosition} ({lockedPoints} pts) — undo
+        ✓ Round {lockedRoundPosition} · {lockedPoints} pts — undo
       </button>
     );
   }
@@ -318,7 +335,7 @@ function LongGameMarker({
       onClick={() =>
         markLongGameCorrect(quizId, teamId, roundPosition, liveRealRoundCount, longGameMaxPoints)
       }
-      className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300"
+      className="rounded-chip border border-edge-strong px-2.5 py-1.5 text-xs font-semibold text-ink-muted transition-colors hover:border-gold hover:text-gold"
     >
       Mark correct
     </button>
@@ -341,14 +358,16 @@ function LongGameSection({
   longGameResults: Record<string, { correctRoundPosition: number | null; pointsAwarded: number | null }> | undefined;
 }) {
   return (
-    <div className="mb-6 rounded border border-amber-900 bg-amber-950/20 p-4">
-      <h3 className="mb-3 text-sm font-medium text-amber-300">The Long Game</h3>
+    <div className="mb-6 rounded-panel border border-gold/40 bg-gold/8 p-4">
+      <h3 className="font-display mb-3 text-sm font-semibold tracking-widest text-gold uppercase">
+        The Long Game
+      </h3>
       <ul className="space-y-2">
         {teams.map((team) => {
           const result = longGameResults?.[team.id];
           return (
-            <li key={team.id} className="flex items-center justify-between text-sm">
-              <span className="text-neutral-100">{team.name}</span>
+            <li key={team.id} className="flex items-center justify-between gap-3 text-sm">
+              <span className="text-ink">{team.name}</span>
               <LongGameMarker
                 quizId={quizId}
                 teamId={team.id}
@@ -400,9 +419,8 @@ function ScoringContent({ code }: { code: string }) {
   const effectiveMode: ScoringMode = isElectronicAvailable ? scoringMode : "paper";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="mb-1 text-2xl font-semibold text-neutral-100">{quiz.title} — Scoring</h1>
-      <p className="mb-8 font-mono text-sm text-neutral-500">{quiz.code}</p>
+    <AppShell width="wide">
+      <PageHeader eyebrow="Scoring" title={quiz.title} meta={<QuizCode code={quiz.code} />} />
 
       <div className="mb-6 flex flex-wrap gap-2">
         {realRounds.map((round) => (
@@ -410,11 +428,12 @@ function ScoringContent({ code }: { code: string }) {
             key={round.id}
             type="button"
             onClick={() => setSelectedRoundId(round.id)}
-            className={`rounded border px-3 py-1.5 text-sm ${
+            className={cn(
+              "rounded-chip border px-3 py-1.5 text-sm transition-colors",
               selectedRound?.id === round.id
-                ? "border-neutral-100 text-neutral-100"
-                : "border-neutral-700 text-neutral-400"
-            }`}
+                ? "border-flame bg-flame font-semibold text-on-flame"
+                : "border-edge-strong text-ink-muted hover:border-flame/60 hover:text-ink-soft"
+            )}
           >
             {round.title}
           </button>
@@ -422,7 +441,7 @@ function ScoringContent({ code }: { code: string }) {
       </div>
 
       {selectedRound?.roundType === "list" && (
-        <p className="mb-4 rounded border border-sky-900 bg-sky-950/30 px-4 py-2 text-sm text-sky-300">
+        <p className="mb-4 rounded-panel border border-mint/40 bg-mint/8 px-4 py-3 text-sm text-mint">
           The Gauntlet - raw score is however many answers a team got right in a row before their
           first miss (not their total correct count). Always scored as a single number - there
           are no individual questions to mark electronically.
@@ -430,26 +449,32 @@ function ScoringContent({ code }: { code: string }) {
       )}
 
       {selectedRound && teams.length === 0 && (
-        <p className="text-neutral-500">No teams yet - add some in Team Setup first.</p>
+        <EmptyState>No teams yet — add some in Team Setup first.</EmptyState>
       )}
 
       {selectedRound && teams.length > 0 && isElectronicAvailable && (
-        <div className="mb-6 inline-flex rounded border border-neutral-700 text-sm">
+        <div className="mb-6 inline-flex overflow-hidden rounded-chip border border-edge-strong text-sm">
           <button
             type="button"
             onClick={() => setScoringMode("paper")}
-            className={`px-3 py-1.5 ${
-              effectiveMode === "paper" ? "bg-neutral-100 text-neutral-900" : "text-neutral-400"
-            }`}
+            className={cn(
+              "px-4 py-2 transition-colors",
+              effectiveMode === "paper"
+                ? "bg-flame font-semibold text-on-flame"
+                : "text-ink-muted hover:text-ink-soft"
+            )}
           >
             Paper
           </button>
           <button
             type="button"
             onClick={() => setScoringMode("electronic")}
-            className={`px-3 py-1.5 ${
-              effectiveMode === "electronic" ? "bg-neutral-100 text-neutral-900" : "text-neutral-400"
-            }`}
+            className={cn(
+              "px-4 py-2 transition-colors",
+              effectiveMode === "electronic"
+                ? "bg-flame font-semibold text-on-flame"
+                : "text-ink-muted hover:text-ink-soft"
+            )}
           >
             Electronic
           </button>
@@ -475,11 +500,11 @@ function ScoringContent({ code }: { code: string }) {
       {selectedRound && teams.length > 0 && effectiveMode === "paper" && (
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="text-xs text-neutral-500">
-              <th className="pb-2 font-normal">Team</th>
-              <th className="pb-2 font-normal">Raw score</th>
-              <th className="pb-2 font-normal">Points</th>
-              {quiz.longGameEnabled && <th className="pb-2 font-normal">The Long Game</th>}
+            <tr className="text-xs tracking-widest text-ink-muted uppercase">
+              <th className="pb-2 font-semibold">Team</th>
+              <th className="pb-2 font-semibold">Raw score</th>
+              <th className="pb-2 font-semibold">Points</th>
+              {quiz.longGameEnabled && <th className="pb-2 font-semibold">The Long Game</th>}
             </tr>
           </thead>
           <tbody>
@@ -507,7 +532,7 @@ function ScoringContent({ code }: { code: string }) {
           </tbody>
         </table>
       )}
-    </div>
+    </AppShell>
   );
 }
 

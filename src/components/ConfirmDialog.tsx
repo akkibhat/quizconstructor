@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 /**
  * The bit of state that decides whether a dialog is showing and what it
  * says. "confirm" gets a Cancel + destructive-styled action button;
@@ -34,34 +36,25 @@ export function ConfirmDialog({
   if (!state) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-lg border border-neutral-800 bg-neutral-900 p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-panel border border-edge-strong bg-surface p-6 shadow-2xl">
         {state.title && (
-          <h2 className="mb-2 text-lg font-semibold text-neutral-100">{state.title}</h2>
+          <h2 className="font-display mb-2 text-lg font-semibold text-ink">{state.title}</h2>
         )}
-        <p className="text-sm text-neutral-300">{state.message}</p>
-        <div className="mt-6 flex justify-end gap-3">
+        <p className="text-sm text-ink-soft">{state.message}</p>
+        <div className="mt-6 flex justify-end gap-2.5">
           {state.kind === "confirm" && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="rounded border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
-            >
+            <Button variant="secondary" onClick={onCancel}>
               Cancel
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant={state.kind === "confirm" ? "danger" : "primary"}
             onClick={onConfirm}
             autoFocus
-            className={
-              state.kind === "confirm"
-                ? "rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
-                : "rounded bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white"
-            }
           >
             {state.confirmLabel ?? (state.kind === "confirm" ? "Delete" : "OK")}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -40,8 +40,12 @@ function LeaderboardContent({ code }: { code: string }) {
 export default function LeaderboardPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-950 p-12">
-      <LeaderboardContent code={code} />
+    // Same TV-set frame as the Display route - this is a second screen
+    // showing the same board, so it should look like the same broadcast.
+    <div className="flex min-h-screen items-center justify-center bg-backdrop p-5">
+      <div className="tv-screen flex min-h-[calc(100vh-2.5rem)] w-full items-center justify-center rounded-screen border-2 border-flame/30 p-12">
+        <LeaderboardContent code={code} />
+      </div>
     </div>
   );
 }

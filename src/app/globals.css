@@ -1,26 +1,119 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  QuizConstructor's design tokens - the "Retro Broadcast" look: a 1970s
+  TV game show played straight rather than for laughs. Deep broadcast
+  teal, burnt orange, warm cream, chunky geometric type.
+
+  Everything visual is defined here and nowhere else. Components use the
+  semantic names below (bg-surface, text-ink, border-edge) and never
+  literal colours, so re-theming the whole app - or trying a variant -
+  means editing this file alone rather than hunting through every route.
+
+  Tailwind v4 turns each token into a utility automatically:
+    --color-flame  ->  bg-flame / text-flame / border-flame
+    --radius-panel ->  rounded-panel
+*/
+@theme {
+  /* --- Surfaces, darkest first --------------------------------------
+     backdrop = the page itself, surface = cards and panels sitting on
+     it, lift = the brightest point of the projector's "screen" glow. */
+  --color-backdrop: #0a2b2c;
+  --color-surface: #0e3a3b;
+  --color-surface-lift: #14504f;
+
+  /* --- Hairlines ----------------------------------------------------
+     Warm cream at low opacity rather than a grey, so dividers pick up
+     the surrounding teal instead of fighting it. */
+  --color-edge: rgba(247, 236, 216, 0.14);
+  --color-edge-strong: rgba(247, 236, 216, 0.28);
+
+  /* --- Text ---------------------------------------------------------
+     Never pure white - cream reads as warm film stock rather than a
+     screenshot, and is easier on the eye across a three-hour night. */
+  --color-ink: #f9f0dd;
+  --color-ink-soft: #dcd0ba;
+  --color-ink-muted: #7fa39c;
+
+  /* --- Primary accent -----------------------------------------------
+     Burnt orange. `deep` is the hard drop-shadow under pressable
+     things (the tactile 70s button edge); `on-flame` is the near-black
+     used for text sitting on top of orange fills. */
+  --color-flame: #f2793d;
+  --color-flame-bright: #ff9257;
+  --color-flame-deep: #b9531f;
+  --color-on-flame: #2b0f05;
+
+  /* --- Round-type signals -------------------------------------------
+     The two special round types each keep their own colour so they stay
+     instantly recognisable on the projector. Deliberately distinct from
+     flame, which is reserved for "this is the primary action". */
+  --color-gold: #ebb84d; /* The Long Game */
+  --color-mint: #52c7b8; /* The Gauntlet */
+
+  /* --- Status -------------------------------------------------------- */
+  --color-danger: #e5563f;
+  --color-success: #6dbf73;
+
+  /* --- Shape ---------------------------------------------------------
+     `screen` is the generous rounding of a period TV set, used for the
+     projector panel. Everything else is tighter. */
+  --radius-screen: 1.375rem;
+  --radius-panel: 0.625rem;
+  --radius-chip: 0.3125rem;
 }
 
+/* Fonts come from next/font (see layout.tsx), which injects them as CSS
+   variables - `inline` so the utilities resolve straight to those. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-jost), "Futura", "Century Gothic", sans-serif;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/*
+  The projector's "screen": a warm pool of light at the top falling away
+  to the backdrop, with the inner shadow of a curved CRT around the
+  edges. Used for the slide panel on Display and its preview on the
+  Controller.
+*/
+@utility tv-screen {
+  background: radial-gradient(
+    105% 90% at 50% 0%,
+    var(--color-surface-lift) 0%,
+    var(--color-backdrop) 68%
+  );
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.45);
+}
+
+/*
+  The tactile edge under pressable things - a hard (not blurred) shadow
+  sitting directly beneath, so buttons read as physical and depress when
+  clicked. Pair with `active:translate-y-px`.
+*/
+@utility edge-flame {
+  box-shadow: 0 3px 0 var(--color-flame-deep);
+}
+
+@utility edge-dark {
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-backdrop);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Headings and anything set in the display face want tighter tracking -
+   geometric type of this era was set close, and it reads as deliberate
+   rather than cramped. */
+.font-display {
+  letter-spacing: -0.015em;
+}
+
+/* Keep focus rings on-theme rather than the browser's default blue. */
+:focus-visible {
+  outline: 2px solid var(--color-flame);
+  outline-offset: 2px;
 }

@@ -4,6 +4,12 @@ import { use, useState } from "react";
 
 import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { RequireAuth } from "@/components/RequireAuth";
+import { AppShell, PageHeader, QuizCode, SectionHeading } from "@/components/ui/AppShell";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { fieldStyles } from "@/components/ui/Field";
+import { EmptyState, Panel } from "@/components/ui/Panel";
+import { cn } from "@/lib/cn";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useQuizByCode } from "@/lib/hooks/useQuizByCode";
 import { useRounds } from "@/lib/hooks/useRounds";
@@ -58,19 +64,30 @@ function AddTeamForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded border border-neutral-800 bg-neutral-900 p-4">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 rounded-panel border border-edge bg-surface p-4"
+    >
       <input
         value={name}
         onChange={(event) => setName(event.target.value)}
         placeholder="Team name"
-        className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+        className={cn(fieldStyles, "text-base")}
       />
 
       {needsPicks && (
         <div>
-          <p className="mb-2 text-sm text-neutral-400">
-            Pick {picksPerTeam} double-points round{picksPerTeam === 1 ? "" : "s"} (
-            {selectedRoundIds.length}/{picksPerTeam} selected)
+          <p className="mb-2.5 text-sm text-ink-muted">
+            Pick {picksPerTeam} double-points round{picksPerTeam === 1 ? "" : "s"} —{" "}
+            <span
+              className={cn(
+                "font-semibold tabular-nums",
+                picksValid ? "text-flame" : "text-ink-soft"
+              )}
+            >
+              {selectedRoundIds.length}/{picksPerTeam}
+            </span>{" "}
+            selected
           </p>
           <div className="flex flex-wrap gap-2">
             {realRounds.map((round) => {
@@ -80,11 +97,12 @@ function AddTeamForm({
                   key={round.id}
                   type="button"
                   onClick={() => toggleRound(round.id)}
-                  className={`rounded border px-3 py-1.5 text-sm ${
+                  className={cn(
+                    "rounded-chip border px-3 py-2 text-sm transition-colors",
                     isSelected
-                      ? "border-amber-500 bg-amber-950/40 text-amber-300"
-                      : "border-neutral-700 text-neutral-300"
-                  }`}
+                      ? "border-flame bg-flame font-semibold text-on-flame"
+                      : "border-edge-strong text-ink-soft hover:border-flame/60"
+                  )}
                 >
                   {round.title}
                 </button>
@@ -94,13 +112,9 @@ function AddTeamForm({
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="rounded bg-neutral-100 px-4 py-2 font-medium text-neutral-900 disabled:opacity-50"
-      >
+      <Button type="submit" variant="primary" size="lg" disabled={!canSubmit} className="w-full sm:w-auto">
         Add Team
-      </button>
+      </Button>
     </form>
   );
 }
@@ -121,25 +135,28 @@ function TeamRow({
     .filter((title): title is string => Boolean(title));
 
   return (
-    <li className="flex items-center justify-between rounded border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div>
-        <p className="text-neutral-100">{team.name}</p>
+    <Panel as="li" className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="min-w-0">
+        <p className="truncate text-ink">{team.name}</p>
         {pickedTitles.length > 0 && (
-          <p className="text-xs text-neutral-500">Double: {pickedTitles.join(", ")}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
+            <Badge tone="flame">2x</Badge>
+            {pickedTitles.join(", ")}
+          </p>
         )}
       </div>
-      <button
-        type="button"
+      <Button
+        variant="danger"
+        size="sm"
         onClick={async () => {
           if (await confirmDialog(`Remove "${team.name}"?`)) {
             deleteTeam(quizId, team.id);
           }
         }}
-        className="rounded border border-red-900 px-2 py-1 text-xs text-red-400"
       >
         Remove
-      </button>
-    </li>
+      </Button>
+    </Panel>
   );
 }
 
@@ -161,16 +178,15 @@ function TeamSetup({ code }: { code: string }) {
   const locked = quiz.status !== "setup";
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <h1 className="mb-1 text-2xl font-semibold text-neutral-100">{quiz.title} — Teams</h1>
-      <p className="mb-8 font-mono text-sm text-neutral-500">{quiz.code}</p>
+    <AppShell>
+      <PageHeader eyebrow="Teams" title={quiz.title} meta={<QuizCode code={quiz.code} />} />
 
       {locked ? (
-        <p className="mb-6 rounded border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-400">
+        <p className="mb-6 rounded-panel border border-edge bg-surface px-4 py-3 text-sm text-ink-muted">
           This quiz is {quiz.status === "live" ? "live" : "complete"} - team signup is locked.
         </p>
       ) : (
-        <div className="mb-6">
+        <div className="mb-8">
           <AddTeamForm
             quizId={quiz.id}
             realRounds={realRounds}
@@ -179,21 +195,26 @@ function TeamSetup({ code }: { code: string }) {
         </div>
       )}
 
-      <h2 className="mb-3 text-lg font-medium text-neutral-100">Teams ({teams.length})</h2>
-      <ul className="space-y-2">
-        {teams.map((team) => (
-          <TeamRow
-            key={team.id}
-            team={team}
-            realRounds={realRounds}
-            quizId={quiz.id}
-            confirmDialog={confirmDialog}
-          />
-        ))}
-      </ul>
+      <SectionHeading>Teams ({teams.length})</SectionHeading>
+
+      {teams.length === 0 ? (
+        <EmptyState>No teams yet — add the first one above.</EmptyState>
+      ) : (
+        <ul className="space-y-2">
+          {teams.map((team) => (
+            <TeamRow
+              key={team.id}
+              team={team}
+              realRounds={realRounds}
+              quizId={quiz.id}
+              confirmDialog={confirmDialog}
+            />
+          ))}
+        </ul>
+      )}
 
       {dialog}
-    </div>
+    </AppShell>
   );
 }
 

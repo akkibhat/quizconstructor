@@ -5,6 +5,7 @@ import { use } from "react";
 import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { LeaderboardView } from "@/components/LeaderboardView";
 import { SlideView } from "@/components/SlideView";
+import { cn } from "@/lib/cn";
 import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
 import { useLiveState } from "@/lib/hooks/useLiveState";
 import { useQuizByCode } from "@/lib/hooks/useQuizByCode";
@@ -24,37 +25,55 @@ function TiebreakDisplay({ tiebreak, teams }: { tiebreak: TiebreakState; teams: 
       : null;
 
   return (
-    <div className="max-w-3xl text-center">
-      <p className="mb-4 text-lg tracking-widest text-neutral-500 uppercase">
+    <div className="w-full max-w-3xl text-center">
+      <p className="font-display mb-5 text-xl font-semibold tracking-[0.3em] text-flame uppercase">
         {tiebreak.contestedPosition === "top" ? "1st / 2nd / 3rd" : "2nd-to-last"} Tiebreak
       </p>
-      <p className="mb-8 text-4xl text-neutral-100">{tiebreak.questionText}</p>
+      <p className="font-display mb-10 text-5xl leading-tight font-semibold text-balance text-ink">
+        {tiebreak.questionText}
+      </p>
 
       {tiebreak.revealed && (
         <>
-          <p className="mb-6 text-3xl text-emerald-400">Answer: {tiebreak.correctAnswer}</p>
+          <p className="font-display mb-8 text-4xl font-bold text-gold">
+            Answer: {tiebreak.correctAnswer}
+          </p>
           {tiebreak.mode === "app-computes" && (
-            <ul className="space-y-2">
-              {contestedTeams.map((team) => (
-                <li
-                  key={team.id}
-                  className={`flex items-center justify-between rounded border px-6 py-3 ${
-                    winnerId === team.id
-                      ? "border-emerald-600 bg-emerald-950/40"
-                      : "border-neutral-800 bg-neutral-900"
-                  }`}
-                >
-                  <span className="text-xl text-neutral-100">
-                    {team.name}
-                    {winnerId === team.id && (
-                      <span className="ml-2 text-sm text-emerald-400">Winner</span>
+            <ul className="space-y-2.5 text-left">
+              {contestedTeams.map((team) => {
+                const isWinner = winnerId === team.id;
+                return (
+                  <li
+                    key={team.id}
+                    className={cn(
+                      "flex items-center justify-between gap-4 rounded-panel border px-6 py-4",
+                      isWinner ? "border-flame-bright bg-flame edge-dark" : "border-edge bg-surface"
                     )}
-                  </span>
-                  <span className="text-xl text-neutral-400">
-                    {tiebreak.guesses[team.id] ?? "—"}
-                  </span>
-                </li>
-              ))}
+                  >
+                    <span
+                      className={cn(
+                        "flex items-center gap-3 text-2xl",
+                        isWinner ? "font-semibold text-on-flame" : "text-ink"
+                      )}
+                    >
+                      {team.name}
+                      {isWinner && (
+                        <span className="rounded-chip bg-on-flame/20 px-2 py-0.5 text-xs font-bold tracking-wider text-on-flame uppercase">
+                          Winner
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        "font-display text-2xl font-bold tabular-nums",
+                        isWinner ? "text-on-flame" : "text-ink-muted"
+                      )}
+                    >
+                      {tiebreak.guesses[team.id] ?? "—"}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </>
@@ -88,8 +107,10 @@ function DisplayContent({ code }: { code: string }) {
   if (liveState === null) {
     return (
       <div className="text-center">
-        <p className="text-4xl font-semibold text-neutral-100">{quiz.title}</p>
-        <p className="mt-4 text-xl text-neutral-500">Waiting for the host to start…</p>
+        <p className="font-display text-7xl font-bold text-balance text-ink">{quiz.title}</p>
+        <p className="font-display mt-6 text-2xl tracking-[0.2em] text-flame uppercase">
+          Waiting for the host…
+        </p>
       </div>
     );
   }
@@ -102,7 +123,16 @@ function DisplayContent({ code }: { code: string }) {
   }
 
   if (liveState.mode === "drinks-break") {
-    return <h1 className="text-7xl font-bold text-neutral-100">Drinks Break</h1>;
+    return (
+      <div className="text-center">
+        <h1 className="font-display text-8xl font-bold tracking-wide text-ink uppercase">
+          Drinks Break
+        </h1>
+        <p className="font-display mt-6 text-2xl tracking-[0.2em] text-flame uppercase">
+          Back shortly
+        </p>
+      </div>
+    );
   }
 
   if (liveState.mode === "tiebreak" && liveState.tiebreak) {
@@ -118,8 +148,13 @@ function DisplayContent({ code }: { code: string }) {
 export default function DisplayPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-950 p-12">
-      <DisplayContent code={code} />
+    // The projector is framed as a period TV set: a thin warm border
+    // around an inset screen with a pool of light at the top. Everything
+    // the room sees renders inside that frame.
+    <div className="flex min-h-screen items-center justify-center bg-backdrop p-5">
+      <div className="tv-screen flex min-h-[calc(100vh-2.5rem)] w-full items-center justify-center rounded-screen border-2 border-flame/30 p-12">
+        <DisplayContent code={code} />
+      </div>
     </div>
   );
 }

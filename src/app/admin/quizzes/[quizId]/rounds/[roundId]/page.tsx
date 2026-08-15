@@ -1,10 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { use, useState } from "react";
 
 import { CodeGateLoading, NotFoundPanel } from "@/components/CodeGateStatus";
 import { RequireAuth } from "@/components/RequireAuth";
+import { AppShell, BackLink, SectionHeading } from "@/components/ui/AppShell";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { fieldStyles, fieldStylesCompact, Label } from "@/components/ui/Field";
+import { EmptyState, Panel } from "@/components/ui/Panel";
+import { cn } from "@/lib/cn";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useQuestions } from "@/lib/hooks/useQuestions";
 import { useQuiz } from "@/lib/hooks/useQuiz";
@@ -70,41 +75,39 @@ function QuestionEditor({
   }
 
   return (
-    <li className="space-y-3 rounded border border-neutral-800 bg-neutral-900 p-4">
-      <div className="flex items-start justify-between gap-4">
-        <span className="pt-2 text-sm text-neutral-500">
+    <Panel as="li" className="space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <span className="font-display text-sm font-semibold tracking-widest text-flame uppercase">
           {isLongGame ? `Clue ${index + 1}` : `Q${index + 1}`}
         </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
+        <div className="flex items-center gap-1.5">
+          <Button
+            size="sm"
             disabled={index === 0}
             onClick={() => swapQuestionOrder(quizId, roundId, question, questions[index - 1])}
-            className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-30"
             aria-label="Move up"
           >
             ↑
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="sm"
             disabled={index === questions.length - 1}
             onClick={() => swapQuestionOrder(quizId, roundId, question, questions[index + 1])}
-            className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 disabled:opacity-30"
             aria-label="Move down"
           >
             ↓
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
             onClick={async () => {
               if (await confirmDialog(isLongGame ? "Delete this clue?" : "Delete this question?")) {
                 deleteQuestion(quizId, roundId, question.id);
               }
             }}
-            className="rounded border border-red-900 px-2 py-1 text-xs text-red-400"
           >
             Delete
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -112,7 +115,7 @@ function QuestionEditor({
         defaultValue={question.text}
         placeholder={isLongGame ? "Clue text" : "Question text"}
         onBlur={(event) => updateQuestion(quizId, roundId, question.id, { text: event.target.value })}
-        className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+        className={fieldStyles}
         rows={2}
       />
 
@@ -124,10 +127,10 @@ function QuestionEditor({
             onBlur={(event) =>
               updateQuestion(quizId, roundId, question.id, { answer: event.target.value })
             }
-            className="flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+            className={cn(fieldStyles, "flex-1")}
             rows={1}
           />
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <input
               type="number"
               step={0.5}
@@ -138,27 +141,39 @@ function QuestionEditor({
                   points: Number(event.target.value) || 0,
                 })
               }
-              className="w-16 rounded border border-neutral-700 bg-neutral-950 px-2 py-2 text-neutral-100"
+              className={cn(fieldStylesCompact, "w-16 tabular-nums")}
               aria-label="Points"
             />
-            <span className="text-xs text-neutral-500">pts</span>
+            <span className="text-xs text-ink-muted">pts</span>
           </div>
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        <label className="text-neutral-400">
-          Image:{" "}
-          <input type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} />
+      <div className="flex flex-wrap items-center gap-3 border-t border-edge pt-3 text-sm">
+        <label className="flex items-center gap-2 text-ink-muted">
+          Image:
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            disabled={uploading}
+            className="text-xs text-ink-muted file:mr-2 file:rounded-chip file:border file:border-edge-strong file:bg-surface file:px-2 file:py-1 file:text-xs file:text-ink-soft"
+          />
         </label>
-        {question.imagePath && <span className="text-xs text-neutral-500">✓ attached</span>}
+        {question.imagePath && <Badge tone="mint">Attached</Badge>}
       </div>
 
       {!isLongGame && (
-        <div className="flex flex-wrap items-center gap-4 text-sm">
-          <label className="text-neutral-400">
-            Audio:{" "}
-            <input type="file" accept="audio/*" onChange={handleAudioChange} disabled={uploading} />
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <label className="flex items-center gap-2 text-ink-muted">
+            Audio:
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={handleAudioChange}
+              disabled={uploading}
+              className="text-xs text-ink-muted file:mr-2 file:rounded-chip file:border file:border-edge-strong file:bg-surface file:px-2 file:py-1 file:text-xs file:text-ink-soft"
+            />
           </label>
           {question.audioPath && (
             <select
@@ -168,7 +183,7 @@ function QuestionEditor({
                   audioPlayMode: event.target.value as AudioPlayMode,
                 })
               }
-              className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-neutral-100"
+              className={fieldStylesCompact}
             >
               <option value="autoplay">Autoplay (background clue)</option>
               <option value="manual">Manual (name that tune / lyrics)</option>
@@ -176,7 +191,7 @@ function QuestionEditor({
           )}
         </div>
       )}
-    </li>
+    </Panel>
   );
 }
 
@@ -200,45 +215,39 @@ function ListRoundEditor({
   const [answerCount, setAnswerCount] = useState(listAnswerReference?.length ?? 0);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <Link
-        href={`/admin/quizzes/${quizId}`}
-        className="mb-4 inline-block text-sm text-neutral-400 hover:text-neutral-200"
-      >
-        ← Back to quiz
-      </Link>
+    <AppShell>
+      <BackLink href={`/admin/quizzes/${quizId}`}>Back to quiz</BackLink>
 
+      <div className="mb-2 flex items-center gap-3">
+        <Badge tone="mint">The Gauntlet</Badge>
+      </div>
       <input
         defaultValue={title}
         onBlur={(event) => updateRound(quizId, roundId, { title: event.target.value })}
-        className="mb-2 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-2xl font-semibold text-neutral-100"
+        className={cn(fieldStyles, "font-display mb-3 text-2xl font-semibold")}
       />
-      <p className="mb-8 text-sm text-neutral-500">
+      <p className="mb-8 text-sm text-ink-muted">
         One shared prompt, scored on how many answers a team gets right in a row before their
         first miss - enter that count as the raw score on the Scoring page, same as any other
         round.
       </p>
 
-      <div className="mb-6 space-y-1">
-        <label htmlFor="listPrompt" className="text-sm text-neutral-400">
-          Prompt (shown to the room)
-        </label>
+      <div className="mb-6 space-y-1.5">
+        <Label htmlFor="listPrompt">Prompt (shown to the room)</Label>
         <textarea
           id="listPrompt"
           defaultValue={listPrompt ?? ""}
           placeholder="e.g. Name any 10 of the top 25 busiest airports in the world"
           onBlur={(event) => updateRound(quizId, roundId, { listPrompt: event.target.value })}
-          className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+          className={fieldStyles}
           rows={2}
         />
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <label htmlFor="listAnswerReference" className="text-sm text-neutral-400">
-            Reference list
-          </label>
-          <span className="text-xs text-neutral-500">
+          <Label htmlFor="listAnswerReference">Reference list</Label>
+          <span className="font-mono text-xs text-mint tabular-nums">
             {answerCount} answer{answerCount === 1 ? "" : "s"}
           </span>
         </div>
@@ -253,11 +262,11 @@ function ListRoundEditor({
             setAnswerCount(parsed.length);
             updateRound(quizId, roundId, { listAnswerReference: parsed });
           }}
-          className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-sm text-neutral-100"
+          className={cn(fieldStyles, "font-mono text-sm")}
           rows={16}
         />
       </div>
-    </div>
+    </AppShell>
   );
 }
 
@@ -319,48 +328,48 @@ function ImportExportSection({
   }
 
   return (
-    <div className="mb-6 rounded border border-neutral-800 bg-neutral-900 p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-neutral-100">Import / Export</h3>
-        <button
-          type="button"
-          disabled={questions.length === 0}
-          onClick={handleExport}
-          className="rounded border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 disabled:opacity-30"
-        >
+    <Panel className="mb-8">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h3 className="font-display text-sm font-semibold tracking-widest text-ink uppercase">
+          Import / Export
+        </h3>
+        <Button size="sm" disabled={questions.length === 0} onClick={handleExport}>
           Export as file
-        </button>
+        </Button>
       </div>
-      <p className="mb-2 text-xs text-neutral-500">
+      <p className="mb-3 text-xs leading-relaxed text-ink-muted">
         One question per line: Question, Answer, Points (optional, defaults to 1) - separated by
-        a Tab (paste straight from a spreadsheet) or a <code>|</code> pipe (if typing by hand).
-        Always adds to this round&apos;s existing questions, never replaces them.
+        a Tab (paste straight from a spreadsheet) or a{" "}
+        <code className="rounded-chip bg-backdrop px-1 py-0.5 font-mono text-ink-soft">|</code>{" "}
+        pipe (if typing by hand). Always adds to this round&apos;s existing questions, never
+        replaces them.
       </p>
       <textarea
         value={pasteText}
         onChange={(event) => setPasteText(event.target.value)}
         placeholder={"Capital of France|Paris|1\nCapital of Japan|Tokyo"}
         rows={4}
-        className="mb-2 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-xs text-neutral-100"
+        className={cn(fieldStyles, "mb-3 font-mono text-xs")}
       />
       <div className="flex items-center gap-3">
         <input
           type="file"
           accept=".tsv,.txt,.csv"
           onChange={handleFileUpload}
-          className="text-xs text-neutral-400"
+          className="text-xs text-ink-muted file:mr-2 file:rounded-chip file:border file:border-edge-strong file:bg-surface file:px-2 file:py-1 file:text-xs file:text-ink-soft"
         />
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="sm"
           disabled={isImporting || !pasteText.trim()}
           onClick={handleImport}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 disabled:opacity-50"
+          className="ml-auto"
         >
           {isImporting ? "Importing…" : "Import"}
-        </button>
+        </Button>
       </div>
-      {message && <p className="mt-2 text-xs text-neutral-400">{message}</p>}
-    </div>
+      {message && <p className="mt-3 text-xs text-mint">{message}</p>}
+    </Panel>
   );
 }
 
@@ -403,30 +412,27 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
   const atClueCap = isLongGame && questions.length >= realRoundCount;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <Link
-        href={`/admin/quizzes/${quizId}`}
-        className="mb-4 inline-block text-sm text-neutral-400 hover:text-neutral-200"
-      >
-        ← Back to quiz
-      </Link>
+    <AppShell>
+      <BackLink href={`/admin/quizzes/${quizId}`}>Back to quiz</BackLink>
 
       {isLongGame ? (
-        <h1 className="mb-2 text-2xl font-semibold text-neutral-100">The Long Game</h1>
+        <>
+          <div className="mb-2">
+            <Badge tone="gold">The Long Game</Badge>
+          </div>
+          <h1 className="font-display mb-3 text-3xl font-semibold text-ink">The Long Game</h1>
+          <p className="mb-8 text-sm text-ink-muted">
+            One clue per round, in order from vaguest to easiest - clue {"{"}
+            n{"}"} is shown at the end of round {"{"}n{"}"}. Exactly one clue slot per real round
+            is enforced automatically.
+          </p>
+        </>
       ) : (
         <input
           defaultValue={round.title}
           onBlur={(event) => updateRound(quizId, roundId, { title: event.target.value })}
-          className="mb-8 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-2xl font-semibold text-neutral-100"
+          className={cn(fieldStyles, "font-display mb-8 text-2xl font-semibold")}
         />
-      )}
-
-      {isLongGame && (
-        <p className="mb-8 text-sm text-neutral-500">
-          One clue per round, in order from vaguest to easiest - clue {"{"}
-          n{"}"} is shown at the end of round {"{"}n{"}"}. Exactly one clue slot per real round is
-          enforced automatically.
-        </p>
       )}
 
       {!isLongGame && (
@@ -438,32 +444,33 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
         />
       )}
 
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-medium text-neutral-100">
-          {isLongGame ? "Clues" : "Questions"}
-        </h2>
-        <button
-          type="button"
-          disabled={atClueCap}
-          onClick={() => addQuestion(quizId, roundId, questions)}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-900 disabled:opacity-30"
-        >
-          {isLongGame ? "Add Clue" : "Add Question"}
-        </button>
-      </div>
+      <SectionHeading
+        actions={
+          <Button
+            variant="primary"
+            disabled={atClueCap}
+            onClick={() => addQuestion(quizId, roundId, questions)}
+          >
+            {isLongGame ? "Add Clue" : "Add Question"}
+          </Button>
+        }
+      >
+        {isLongGame ? "Clues" : "Questions"}
+      </SectionHeading>
+
       {atClueCap && (
-        <p className="mb-4 text-xs text-neutral-500">
+        <p className="mb-4 text-xs text-ink-muted">
           There{"'"}s already one clue per round ({realRoundCount}). Add another round first if
           you need more.
         </p>
       )}
 
       {questions.length === 0 ? (
-        <p className="rounded border border-dashed border-neutral-800 px-4 py-8 text-center text-sm text-neutral-500">
+        <EmptyState>
           {isLongGame
             ? "No clues yet — add your first one, starting with the vaguest."
             : "No questions yet — add your first one, or paste a batch in via Import above."}
-        </p>
+        </EmptyState>
       ) : (
         <ul className="space-y-3">
           {questions.map((question, index) => (
@@ -482,7 +489,7 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
       )}
 
       {dialog}
-    </div>
+    </AppShell>
   );
 }
 

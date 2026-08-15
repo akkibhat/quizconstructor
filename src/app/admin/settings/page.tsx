@@ -1,9 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { RequireAuth } from "@/components/RequireAuth";
+import { AppShell, BackLink, PageHeader, SectionHeading } from "@/components/ui/AppShell";
+import { Button } from "@/components/ui/Button";
+import { fieldStyles, fieldStylesCompact, Label } from "@/components/ui/Field";
+import { EmptyState, Panel } from "@/components/ui/Panel";
+import { cn } from "@/lib/cn";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useTiebreakQuestions } from "@/lib/hooks/useTiebreakQuestions";
 import {
@@ -21,38 +25,38 @@ function TiebreakQuestionRow({
   confirmDialog: (message: string) => Promise<boolean>;
 }) {
   return (
-    <li className="space-y-2 rounded border border-neutral-800 bg-neutral-900 p-4">
-      <div className="flex items-start justify-between gap-4">
+    <Panel as="li" className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
         <textarea
           defaultValue={item.question}
           onBlur={(event) => updateTiebreakQuestion(item.id, { question: event.target.value })}
-          className="flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+          className={cn(fieldStyles, "flex-1")}
           rows={2}
         />
-        <button
-          type="button"
+        <Button
+          variant="danger"
+          size="sm"
           onClick={async () => {
             if (await confirmDialog("Delete this tiebreak question?")) {
               deleteTiebreakQuestion(item.id);
             }
           }}
-          className="rounded border border-red-900 px-2 py-1 text-xs text-red-400"
         >
           Delete
-        </button>
+        </Button>
       </div>
       <div className="flex items-center gap-2">
-        <label className="text-sm text-neutral-400">Answer:</label>
+        <span className="text-sm text-ink-muted">Answer:</span>
         <input
           type="number"
           defaultValue={item.answer}
           onBlur={(event) =>
             updateTiebreakQuestion(item.id, { answer: Number(event.target.value) || 0 })
           }
-          className="w-40 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-neutral-100"
+          className={cn(fieldStylesCompact, "w-40 tabular-nums")}
         />
       </div>
-    </li>
+    </Panel>
   );
 }
 
@@ -77,34 +81,30 @@ function AddTiebreakQuestionForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mb-6 space-y-3 rounded border border-neutral-800 bg-neutral-900 p-4"
+      className="mb-6 space-y-3 rounded-panel border border-edge bg-surface p-4"
     >
       <textarea
         value={question}
         onChange={(event) => setQuestion(event.target.value)}
         placeholder="e.g. What's the circumference of the globe in km?"
-        className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+        className={fieldStyles}
         rows={2}
       />
       <div className="flex items-center gap-2">
-        <label htmlFor="answer" className="text-sm text-neutral-400">
+        <Label htmlFor="answer" className="shrink-0">
           Answer:
-        </label>
+        </Label>
         <input
           id="answer"
           type="number"
           value={answer}
           onChange={(event) => setAnswer(event.target.value)}
-          className="w-40 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-neutral-100"
+          className={cn(fieldStylesCompact, "w-40 tabular-nums")}
         />
       </div>
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 disabled:opacity-50"
-      >
+      <Button type="submit" variant="primary" disabled={isSubmitting}>
         Add Tiebreak Question
-      </button>
+      </Button>
     </form>
   );
 }
@@ -114,29 +114,27 @@ function SettingsContent() {
   const { confirmDialog, dialog } = useConfirmDialog();
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <Link
-        href="/"
-        className="mb-4 inline-block text-sm text-neutral-400 hover:text-neutral-200"
-      >
-        ← Back to dashboard
-      </Link>
+    <AppShell>
+      <BackLink href="/">Back to dashboard</BackLink>
 
-      <h1 className="mb-2 text-2xl font-semibold text-neutral-100">Settings</h1>
-      <p className="mb-8 text-sm text-neutral-500">
-        Shared across every quiz, not tied to one specific night.
-      </p>
+      <PageHeader
+        eyebrow="Global"
+        title="Settings"
+        description="Shared across every quiz, not tied to one specific night."
+      />
 
-      <h2 className="mb-3 text-lg font-medium text-neutral-100">Tiebreak Questions</h2>
-      <p className="mb-4 text-sm text-neutral-500">
+      <SectionHeading>Tiebreak Questions</SectionHeading>
+      <p className="mb-4 text-sm text-ink-muted">
         Numeric-answer questions - closest guess wins. Pulled in whenever a tie needs resolving
         (1st/2nd/3rd or the 2nd-to-last prize) from the Controller.
       </p>
 
       <AddTiebreakQuestionForm />
 
-      {questions === undefined && <p className="text-neutral-400">Loading…</p>}
-      {questions?.length === 0 && <p className="text-neutral-500">No tiebreak questions yet.</p>}
+      {questions === undefined && <p className="text-sm text-ink-muted">Loading…</p>}
+      {questions?.length === 0 && (
+        <EmptyState>No tiebreak questions yet — add one above.</EmptyState>
+      )}
 
       <ul className="space-y-2">
         {questions?.map((item) => (
@@ -145,7 +143,7 @@ function SettingsContent() {
       </ul>
 
       {dialog}
-    </div>
+    </AppShell>
   );
 }
 

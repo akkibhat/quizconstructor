@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { CodeGateLoading } from "@/components/CodeGateStatus";
 import { useAuth } from "@/lib/hooks/useAuth";
 
 /**
@@ -28,8 +29,8 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   if (user === undefined) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-neutral-400">
-        Loading…
+      <div className="flex min-h-screen items-center justify-center">
+        <CodeGateLoading variant="screen" />
       </div>
     );
   }

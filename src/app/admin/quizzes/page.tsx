@@ -13,5 +13,5 @@ export default function QuizzesRedirectPage() {
     router.replace("/");
   }, [router]);
 
-  return <p className="p-10 text-neutral-400">Redirecting…</p>;
+  return <p className="p-10 text-sm text-ink-muted">Redirecting…</p>;
 }

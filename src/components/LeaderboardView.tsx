@@ -1,3 +1,4 @@
+import { cn } from "@/lib/cn";
 import type { LeaderboardEntry } from "@/lib/hooks/useLeaderboardTotals";
 
 /**
@@ -30,28 +31,66 @@ export function LeaderboardView({
   const secondToLastIndex = entries.length >= 2 ? entries.length - 2 : -1;
 
   return (
-    <div className="w-full max-w-2xl">
-      <h1 className="mb-8 text-center text-4xl font-bold text-neutral-100">Leaderboard</h1>
+    <div className="w-full max-w-3xl">
+      <h1 className="font-display mb-8 text-center text-6xl font-bold tracking-wide text-ink uppercase">
+        Leaderboard
+      </h1>
+
       {entries.length === 0 ? (
-        <p className="text-center text-neutral-500">No teams yet.</p>
+        <p className="text-center text-ink-muted">No teams yet.</p>
       ) : (
-        <ol className="space-y-2">
+        <ol className="space-y-2.5">
           {entries.map((entry, index) => {
             const isRevealed = index >= revealFromIndex;
+            // The winner only gets the full orange treatment once the
+            // top of the board is actually revealed - lighting up row 1
+            // while it still reads "???" would give the game away.
+            const isWinner = index === 0 && isRevealed;
+
             return (
               <li
                 key={entry.teamId}
-                className="flex items-center justify-between rounded border border-neutral-800 bg-neutral-900 px-6 py-3"
+                className={cn(
+                  "flex items-center gap-5 rounded-panel border px-6 py-4 transition-colors",
+                  isWinner
+                    ? "border-flame-bright bg-flame edge-dark"
+                    : isRevealed
+                      ? "border-edge bg-surface"
+                      : "border-edge/60 bg-surface/40"
+                )}
               >
-                <span className="text-xl text-neutral-100">
-                  {index + 1}. {isRevealed ? entry.name : "???"}
+                <span
+                  className={cn(
+                    "font-display w-10 shrink-0 text-3xl font-bold tabular-nums",
+                    isWinner ? "text-on-flame" : "text-ink-muted"
+                  )}
+                >
+                  {index + 1}
+                </span>
+
+                <span
+                  className={cn(
+                    "flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-2xl",
+                    isWinner ? "font-semibold text-on-flame" : "text-ink",
+                    !isRevealed && "text-ink-muted"
+                  )}
+                >
+                  {isRevealed ? entry.name : "???"}
                   {isRevealed && index === secondToLastIndex && (
-                    <span className="ml-2 rounded border border-purple-700 px-1.5 py-0.5 text-xs text-purple-300">
+                    <span className="rounded-chip border border-gold/45 px-2 py-0.5 text-xs font-semibold tracking-wide text-gold uppercase">
                       2nd-to-last prize
                     </span>
                   )}
                 </span>
-                <span className="text-xl text-neutral-400">{isRevealed ? entry.total : "—"}</span>
+
+                <span
+                  className={cn(
+                    "font-display shrink-0 text-3xl font-bold tabular-nums",
+                    isWinner ? "text-on-flame" : isRevealed ? "text-ink" : "text-ink-muted"
+                  )}
+                >
+                  {isRevealed ? entry.total : "—"}
+                </span>
               </li>
             );
           })}
