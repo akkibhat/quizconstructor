@@ -110,6 +110,9 @@ export async function createQuiz(
         order: (i + 1) * 10,
         title: `Round ${i + 1}`,
         isLongGame: false,
+        roundType: "standard",
+        listPrompt: null,
+        listAnswerReference: null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -127,6 +130,9 @@ export async function createQuiz(
         order: 0,
         title: "The Long Game",
         isLongGame: true,
+        roundType: "standard",
+        listPrompt: null,
+        listAnswerReference: null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

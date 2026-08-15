@@ -7,7 +7,14 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { useQuestions } from "@/lib/hooks/useQuestions";
 import { useQuiz } from "@/lib/hooks/useQuiz";
 import { useRounds } from "@/lib/hooks/useRounds";
-import { addRound, deleteRound, swapRoundOrder, TooFewRoundsForLongGameError } from "@/lib/rounds";
+import {
+  addListRound,
+  addRound,
+  deleteRound,
+  ListRoundAlreadyExistsError,
+  swapRoundOrder,
+  TooFewRoundsForLongGameError,
+} from "@/lib/rounds";
 import type { Round } from "@/lib/types/round";
 
 function RoundRow({
@@ -46,6 +53,11 @@ function RoundRow({
         className="text-neutral-100 hover:underline"
       >
         {round.title}
+        {round.roundType === "list" && (
+          <span className="ml-2 rounded border border-sky-800 px-1.5 py-0.5 text-xs text-sky-400">
+            List
+          </span>
+        )}
       </Link>
       <div className="flex items-center gap-2">
         <button
@@ -132,13 +144,34 @@ function QuizEditor({ quizId }: { quizId: string }) {
 
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-medium text-neutral-100">Rounds</h2>
-        <button
-          type="button"
-          onClick={() => addRound(quizId, realRounds)}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-900"
-        >
-          Add Round
-        </button>
+        <div className="flex items-center gap-2">
+          {!realRounds.some((round) => round.roundType === "list") && (
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await addListRound(quizId, realRounds);
+                } catch (error) {
+                  if (error instanceof ListRoundAlreadyExistsError) {
+                    alert(error.message);
+                    return;
+                  }
+                  throw error;
+                }
+              }}
+              className="rounded border border-sky-800 px-3 py-1.5 text-sm text-sky-400"
+            >
+              Add List Round
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => addRound(quizId, realRounds)}
+            className="rounded bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-900"
+          >
+            Add Round
+          </button>
+        </div>
       </div>
 
       <ul className="space-y-2">

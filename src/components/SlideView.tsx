@@ -62,5 +62,15 @@ export function SlideView({ slide }: { slide: Slide | undefined }) {
           <p className="max-w-4xl text-center text-5xl text-neutral-100">{slide.answerText}</p>
         </div>
       );
+
+    case "list-prompt":
+      return <p className="max-w-4xl text-center text-4xl text-neutral-100">{slide.prompt}</p>;
+
+    case "list-answer":
+      return (
+        <div className="max-h-[80vh] max-w-4xl overflow-y-auto whitespace-pre-wrap text-center text-2xl text-neutral-100">
+          {slide.answerReference}
+        </div>
+      );
   }
 }

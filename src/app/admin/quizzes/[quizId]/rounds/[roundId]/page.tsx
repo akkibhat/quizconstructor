@@ -150,6 +150,72 @@ function QuestionEditor({
   );
 }
 
+function ListRoundEditor({
+  quizId,
+  roundId,
+  title,
+  listPrompt,
+  listAnswerReference,
+}: {
+  quizId: string;
+  roundId: string;
+  title: string;
+  listPrompt: string | null;
+  listAnswerReference: string | null;
+}) {
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-10">
+      <Link
+        href={`/admin/quizzes/${quizId}`}
+        className="mb-4 inline-block text-sm text-neutral-400 hover:text-neutral-200"
+      >
+        ← Back to quiz
+      </Link>
+
+      <input
+        defaultValue={title}
+        onBlur={(event) => updateRound(quizId, roundId, { title: event.target.value })}
+        className="mb-2 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-2xl font-semibold text-neutral-100"
+      />
+      <p className="mb-8 text-sm text-neutral-500">
+        One shared prompt, scored on how many answers a team gets right in a row before their
+        first miss - enter that count as the raw score on the Scoring page, same as any other
+        round.
+      </p>
+
+      <div className="mb-6 space-y-1">
+        <label htmlFor="listPrompt" className="text-sm text-neutral-400">
+          Prompt (shown to the room)
+        </label>
+        <textarea
+          id="listPrompt"
+          defaultValue={listPrompt ?? ""}
+          placeholder="e.g. Name any 10 of the top 25 busiest airports in the world"
+          onBlur={(event) => updateRound(quizId, roundId, { listPrompt: event.target.value })}
+          className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+          rows={2}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="listAnswerReference" className="text-sm text-neutral-400">
+          Reference list
+        </label>
+        <textarea
+          id="listAnswerReference"
+          defaultValue={listAnswerReference ?? ""}
+          placeholder="Paste in the full valid-answer list - your own cheat sheet while marking, also shown to the room as the reveal afterwards"
+          onBlur={(event) =>
+            updateRound(quizId, roundId, { listAnswerReference: event.target.value })
+          }
+          className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-sm text-neutral-100"
+          rows={16}
+        />
+      </div>
+    </div>
+  );
+}
+
 function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
   const quiz = useQuiz(quizId);
   const rounds = useRounds(quizId);
@@ -165,6 +231,18 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
 
   if (quiz === null || !round) {
     return <p className="p-10 text-neutral-400">No such round.</p>;
+  }
+
+  if (round.roundType === "list") {
+    return (
+      <ListRoundEditor
+        quizId={quizId}
+        roundId={roundId}
+        title={round.title}
+        listPrompt={round.listPrompt}
+        listAnswerReference={round.listAnswerReference}
+      />
+    );
   }
 
   // The Long Game must always have at most one clue per real round - see

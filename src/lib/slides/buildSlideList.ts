@@ -12,10 +12,15 @@ import type { Slide } from "@/lib/types/slide";
  * what "slide index 14" means - Next/Previous just moves an index into
  * this array.
  *
- * Sequence per round, repeated for every round in order:
+ * Sequence per *standard* round, repeated for every standard round in order:
  *   round title -> each question (no answer shown) -> Long Game clue
  *   (if enabled) -> "Answers" divider -> each answer, same order as the
  *   questions.
+ * A round with roundType "list" (The List - see Round.roundType) instead
+ * gets: round title -> its single prompt -> Long Game clue (if enabled) ->
+ * its single reveal. One shared prompt/reveal stands in for the usual
+ * per-question slides, since it really is one shared question with many
+ * answer slots rather than several distinct questions.
  * After every round has run through this, if Long Game is enabled, one
  * final slide reveals the overall Long Game answer.
  *
@@ -47,17 +52,21 @@ export function buildSlideList(
   realRounds.forEach((round, index) => {
     slides.push({ type: "round-title", roundId: round.id, title: round.title });
 
-    const questions = questionsByRound[round.id] ?? [];
-    for (const question of questions) {
-      slides.push({
-        type: "question",
-        roundId: round.id,
-        questionId: question.id,
-        text: question.text,
-        imagePath: question.imagePath,
-        audioPath: question.audioPath,
-        audioPlayMode: question.audioPlayMode,
-      });
+    if (round.roundType === "list") {
+      slides.push({ type: "list-prompt", roundId: round.id, prompt: round.listPrompt ?? "" });
+    } else {
+      const questions = questionsByRound[round.id] ?? [];
+      for (const question of questions) {
+        slides.push({
+          type: "question",
+          roundId: round.id,
+          questionId: question.id,
+          text: question.text,
+          imagePath: question.imagePath,
+          audioPath: question.audioPath,
+          audioPlayMode: question.audioPlayMode,
+        });
+      }
     }
 
     const clue = longGameClues[index];
@@ -70,18 +79,27 @@ export function buildSlideList(
       });
     }
 
-    slides.push({
-      type: "answers-divider",
-      roundId: round.id,
-      title: `${round.title} — Answers`,
-    });
-    for (const question of questions) {
+    if (round.roundType === "list") {
       slides.push({
-        type: "answer",
+        type: "list-answer",
         roundId: round.id,
-        questionId: question.id,
-        answerText: question.answer,
+        answerReference: round.listAnswerReference ?? "",
       });
+    } else {
+      const questions = questionsByRound[round.id] ?? [];
+      slides.push({
+        type: "answers-divider",
+        roundId: round.id,
+        title: `${round.title} — Answers`,
+      });
+      for (const question of questions) {
+        slides.push({
+          type: "answer",
+          roundId: round.id,
+          questionId: question.id,
+          answerText: question.answer,
+        });
+      }
     }
   });
 

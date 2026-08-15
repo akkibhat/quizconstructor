@@ -10,7 +10,7 @@ import {
 import { db } from "@/lib/firebase/client";
 import type { Round } from "@/lib/types/round";
 
-/** Adds a new round at the end of the quiz's round list. */
+/** Adds a new standard round at the end of the quiz's round list. */
 export async function addRound(quizId: string, existingRounds: Round[]): Promise<void> {
   const highestOrder = existingRounds.reduce((max, round) => Math.max(max, round.order), 0);
   const roundRef = doc(collection(db, "quizzes", quizId, "rounds"));
@@ -20,6 +20,44 @@ export async function addRound(quizId: string, existingRounds: Round[]): Promise
     order: highestOrder + 10,
     title: `Round ${existingRounds.length + 1}`,
     isLongGame: false,
+    roundType: "standard",
+    listPrompt: null,
+    listAnswerReference: null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  batch.update(doc(db, "quizzes", quizId), {
+    numRounds: existingRounds.length + 1,
+    updatedAt: serverTimestamp(),
+  });
+  await batch.commit();
+}
+
+/** Thrown by addListRound when a quiz already has a List round - only one is allowed per quiz. */
+export class ListRoundAlreadyExistsError extends Error {}
+
+/**
+ * Adds The List - the special single-prompt round (see Round.roundType) -
+ * at the end of the quiz's round list. The host can then drag it to
+ * wherever they want (e.g. the middle, before a drinks break) using the
+ * normal up/down reorder controls, same as any other round.
+ */
+export async function addListRound(quizId: string, existingRounds: Round[]): Promise<void> {
+  if (existingRounds.some((round) => round.roundType === "list")) {
+    throw new ListRoundAlreadyExistsError("This quiz already has a List round.");
+  }
+
+  const highestOrder = existingRounds.reduce((max, round) => Math.max(max, round.order), 0);
+  const roundRef = doc(collection(db, "quizzes", quizId, "rounds"));
+
+  const batch = writeBatch(db);
+  batch.set(roundRef, {
+    order: highestOrder + 10,
+    title: "The List",
+    isLongGame: false,
+    roundType: "list",
+    listPrompt: null,
+    listAnswerReference: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -33,7 +71,7 @@ export async function addRound(quizId: string, existingRounds: Round[]): Promise
 export async function updateRound(
   quizId: string,
   roundId: string,
-  updates: Partial<Pick<Round, "title">>
+  updates: Partial<Pick<Round, "title" | "listPrompt" | "listAnswerReference">>
 ): Promise<void> {
   await updateDoc(doc(db, "quizzes", quizId, "rounds", roundId), {
     ...updates,
