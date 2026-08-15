@@ -46,6 +46,66 @@ export async function applyTiebreakResult(
 }
 
 /**
+ * Finds teams a tiebreak has failed to separate: groups of two or more
+ * whose guesses are *exactly* as close to the answer as each other.
+ *
+ * That covers both ways it happens - two teams writing down the same
+ * number, and two teams landing either side of it at equal distance
+ * (488 and 512 against 500). Neither has won, so neither should be
+ * handed a placing; the caller runs another question between just these
+ * teams instead.
+ *
+ * Groups come back in finishing order, best-placed first, and teams
+ * without a guess are ignored (the confirm step requires every contested
+ * team to have one before it will rank anything).
+ */
+export function detectDeadHeats(
+  correctAnswer: number,
+  guesses: Record<string, number>,
+  rankedTeamIds: string[]
+): string[][] {
+  const groups: string[][] = [];
+  let current: string[] = [];
+
+  for (const teamId of rankedTeamIds) {
+    const guess = guesses[teamId];
+    if (guess === undefined) continue;
+
+    const previous = current[current.length - 1];
+    const isLevel =
+      previous !== undefined &&
+      Math.abs(guess - correctAnswer) === Math.abs(guesses[previous] - correctAnswer);
+
+    if (isLevel) {
+      current.push(teamId);
+    } else {
+      if (current.length > 1) groups.push(current);
+      current = [teamId];
+    }
+  }
+  if (current.length > 1) groups.push(current);
+
+  return groups;
+}
+
+/**
+ * Slots the result of a follow-up tiebreak back into the order already
+ * established, by refilling exactly the positions the level teams were
+ * occupying. Everyone else stays exactly where they were - a re-run
+ * between two teams must never reshuffle the ones already separated.
+ */
+export function spliceResolvedOrder(
+  pendingOrder: string[],
+  contestedTeamIds: string[],
+  resolvedOrder: string[]
+): string[] {
+  const queue = [...resolvedOrder];
+  return pendingOrder.map((teamId) =>
+    contestedTeamIds.includes(teamId) ? (queue.shift() ?? teamId) : teamId
+  );
+}
+
+/**
  * Ranks tied teams by how close their guess was to the correct answer,
  * closest first. Teams that never had a guess entered sort to the back -
  * they can't win a tiebreak they didn't answer, and dropping them

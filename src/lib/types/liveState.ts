@@ -35,6 +35,33 @@ export interface TiebreakState {
   // Whether Display should show the correct answer (and, in app-computes
   // mode, the guesses and computed winner) yet, or just the question.
   revealed: boolean;
+
+  // --- Dead-heat chaining ---------------------------------------------
+  // Two teams can be exactly as close as each other - either by guessing
+  // the same number, or by landing either side of it at equal distance.
+  // Neither has won, so a fresh question is pulled and run between just
+  // those teams. The three fields below carry that chain along.
+
+  // Which attempt this is: 1 for the first, incrementing each time a
+  // dead heat forces another. Shown on screen so the room knows it's a
+  // second decider rather than a repeat.
+  attempt: number;
+
+  // The full running order worked out so far, across every attempt. The
+  // teams still level sit in the slots they'll occupy once separated, so
+  // resolving them is a matter of slotting the result back in. null on a
+  // first attempt, when nothing has been established yet.
+  pendingOrder: string[] | null;
+
+  // Groups still waiting to be separated, best-placed first. The current
+  // attempt is settling the group that was at the front; anything left
+  // here queues up behind it. Usually empty - it only fills when one
+  // question somehow leaves two *separate* pairs level.
+  pendingDeadHeats: string[][];
+
+  // Bank questions already spent on this chain, so a re-run never asks
+  // the same thing twice.
+  usedQuestionIds: string[];
 }
 
 // Firestore document at quizzes/{quizId}/liveState/current - the single

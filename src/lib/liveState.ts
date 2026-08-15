@@ -77,7 +77,15 @@ export async function startTiebreak(
   correctAnswer: number,
   contestedPosition: ContestedPosition,
   contestedTeamIds: string[],
-  mode: TiebreakMode
+  mode: TiebreakMode,
+  // Only passed when a dead heat is forcing another attempt - see the
+  // chaining fields on TiebreakState. Defaults describe a first run.
+  chain?: {
+    attempt: number;
+    pendingOrder: string[] | null;
+    pendingDeadHeats: string[][];
+    usedQuestionIds: string[];
+  }
 ): Promise<void> {
   const tiebreak: TiebreakState = {
     questionText,
@@ -87,6 +95,10 @@ export async function startTiebreak(
     contestedTeamIds,
     guesses: {},
     revealed: false,
+    attempt: chain?.attempt ?? 1,
+    pendingOrder: chain?.pendingOrder ?? null,
+    pendingDeadHeats: chain?.pendingDeadHeats ?? [],
+    usedQuestionIds: chain?.usedQuestionIds ?? [],
   };
   await updateDoc(liveStateRef(quizId), {
     mode: "tiebreak",

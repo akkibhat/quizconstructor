@@ -31,7 +31,12 @@ import {
   startTiebreak,
 } from "@/lib/liveState";
 import { computeTiebreakWinner, unresolvedTieGroups, type TieGroup } from "@/lib/tieDetection";
-import { applyTiebreakResult, rankTeamsByGuess } from "@/lib/tiebreakResults";
+import {
+  applyTiebreakResult,
+  detectDeadHeats,
+  rankTeamsByGuess,
+  spliceResolvedOrder,
+} from "@/lib/tiebreakResults";
 import type { AudioPlayMode } from "@/lib/types/question";
 import type { TiebreakMode, TiebreakState } from "@/lib/types/liveState";
 import type { TiebreakQuestion } from "@/lib/types/tiebreakQuestion";
@@ -179,7 +184,16 @@ function TieAlertBanner({
                     question.answer,
                     group.position,
                     group.teams.map((team) => team.teamId),
-                    mode
+                    mode,
+                    // Recorded from the outset so that if this question
+                    // fails to separate anyone, the decider that follows
+                    // can't pick the same one again.
+                    {
+                      attempt: 1,
+                      pendingOrder: null,
+                      pendingDeadHeats: [],
+                      usedQuestionIds: [question.id],
+                    }
                   );
                   setResolvingIndex(null);
                   setSelectedQuestionId("");
@@ -205,11 +219,13 @@ function TiebreakPanel({
   hostUid,
   tiebreak,
   teams,
+  tiebreakQuestions,
 }: {
   quizId: string;
   hostUid: string;
   tiebreak: TiebreakState;
   teams: Team[];
+  tiebreakQuestions: TiebreakQuestion[] | undefined;
 }) {
   const contestedTeams = tiebreak.contestedTeamIds
     .map((teamId) => teams.find((team) => team.id === teamId))
@@ -224,33 +240,108 @@ function TiebreakPanel({
   const [manualWinnerId, setManualWinnerId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Ranking - and spotting teams it failed to separate - only means
+  // anything once every contested team has a guess recorded.
+  const allGuessesIn = tiebreak.contestedTeamIds.every(
+    (teamId) => tiebreak.guesses[teamId] !== undefined
+  );
+  const spentQuestionIds = tiebreak.usedQuestionIds ?? [];
+  const followUpsAvailable = (tiebreakQuestions ?? []).filter(
+    (question) => !spentQuestionIds.includes(question.id)
+  ).length;
+
+  const deadHeats =
+    tiebreak.mode === "app-computes" && tiebreak.revealed && allGuessesIn
+      ? detectDeadHeats(
+          tiebreak.correctAnswer,
+          tiebreak.guesses,
+          rankTeamsByGuess(tiebreak.correctAnswer, tiebreak.guesses, tiebreak.contestedTeamIds)
+        )
+      : [];
+  // Nobody in a dead heat has won anything yet, so none of them get the
+  // winner treatment - that's the whole point of catching it.
+  const levelTeamIds = new Set(deadHeats.flat());
+
   const winnerId = tiebreak.mode === "app-computes" ? computedWinnerId : manualWinnerId;
+  const canProceed =
+    tiebreak.revealed &&
+    (tiebreak.mode === "app-computes"
+      ? allGuessesIn && (deadHeats.length === 0 || followUpsAvailable > 0)
+      : Boolean(manualWinnerId));
 
   /**
-   * Records the placing, then returns to the leaderboard. Until this runs
-   * the tie stays flagged as outstanding - leaving via "Back to
-   * Leaderboard" deliberately records nothing, so an abandoned tiebreak
-   * doesn't silently award a prize.
+   * Records the placing, then returns to the leaderboard - unless the
+   * guesses failed to separate somebody, in which case it pulls a fresh
+   * question and runs another decider between just those teams.
    *
-   * Ranking everyone rather than just the winner matters for a tie across
+   * Until a result is actually recorded the tie stays flagged as
+   * outstanding, and leaving via "Back to Leaderboard" records nothing -
+   * so an abandoned tiebreak can't quietly award a prize.
+   *
+   * Ranking everyone rather than only the winner matters for a tie across
    * the podium, where 2nd and 3rd are real placings too. For a tie at the
-   * bottom only the winner is meaningful (they take the prize; the board
-   * isn't reordered), but ranking the rest anyway is what marks the whole
-   * group as settled so the "Tiebreak pending" badges clear.
+   * bottom only the winner means anything (they take the prize; the board
+   * isn't reordered), but ranking the rest is what marks the whole group
+   * as settled so the "Tiebreak pending" badges clear.
    */
   async function confirmResult() {
-    if (!winnerId) return;
+    if (!canProceed) return;
     setIsSaving(true);
     try {
-      const ordered =
+      const ranked =
         tiebreak.mode === "app-computes"
           ? rankTeamsByGuess(tiebreak.correctAnswer, tiebreak.guesses, tiebreak.contestedTeamIds)
-          : [winnerId, ...tiebreak.contestedTeamIds.filter((id) => id !== winnerId)];
-      await applyTiebreakResult(quizId, tiebreak.contestedPosition, ordered);
+          : [
+              manualWinnerId as string,
+              ...tiebreak.contestedTeamIds.filter((id) => id !== manualWinnerId),
+            ];
+
+      // Fold this attempt's result into the order built up so far, so a
+      // re-run between two teams never disturbs anyone already separated.
+      const fullOrder = tiebreak.pendingOrder
+        ? spliceResolvedOrder(tiebreak.pendingOrder, tiebreak.contestedTeamIds, ranked)
+        : ranked;
+
+      // A host judging manually has, by definition, separated them.
+      const stillLevel =
+        tiebreak.mode === "app-computes"
+          ? detectDeadHeats(tiebreak.correctAnswer, tiebreak.guesses, ranked)
+          : [];
+      const queue = [...stillLevel, ...(tiebreak.pendingDeadHeats ?? [])];
+      const nextQuestion = queue.length > 0 ? pickFollowUpQuestion() : null;
+
+      if (queue.length > 0 && nextQuestion) {
+        await startTiebreak(
+          quizId,
+          hostUid,
+          nextQuestion.question,
+          nextQuestion.answer,
+          tiebreak.contestedPosition,
+          queue[0],
+          tiebreak.mode,
+          {
+            attempt: (tiebreak.attempt ?? 1) + 1,
+            pendingOrder: fullOrder,
+            pendingDeadHeats: queue.slice(1),
+            usedQuestionIds: [...(tiebreak.usedQuestionIds ?? []), nextQuestion.id],
+          }
+        );
+        return;
+      }
+
+      await applyTiebreakResult(quizId, tiebreak.contestedPosition, fullOrder);
       await endTiebreak(quizId, hostUid);
     } finally {
       setIsSaving(false);
     }
+  }
+
+  /** A bank question this chain hasn't already spent, at random. */
+  function pickFollowUpQuestion(): TiebreakQuestion | null {
+    const spent = tiebreak.usedQuestionIds ?? [];
+    const available = (tiebreakQuestions ?? []).filter((q) => !spent.includes(q.id));
+    if (available.length === 0) return null;
+    return available[Math.floor(Math.random() * available.length)];
   }
 
   return (
@@ -261,7 +352,12 @@ function TiebreakPanel({
     >
       <PageHeader
         eyebrow={`${tiebreak.contestedPosition === "top" ? "1st / 2nd / 3rd" : "2nd-to-last"} tiebreak`}
-        title="Tiebreak"
+        title={(tiebreak.attempt ?? 1) > 1 ? `Decider ${tiebreak.attempt}` : "Tiebreak"}
+        description={
+          (tiebreak.attempt ?? 1) > 1
+            ? "The last question couldn't separate these teams, so here's a fresh one between just them."
+            : undefined
+        }
       />
 
       <div className="tv-screen mb-6 rounded-screen border-2 border-flame/30 p-8 text-center">
@@ -278,18 +374,36 @@ function TiebreakPanel({
       {tiebreak.mode === "app-computes" ? (
         <div className="space-y-2">
           {contestedTeams.map((team) => {
-            const isWinner = winnerId === team.id;
+            const isLevel = levelTeamIds.has(team.id);
+            const isWinner = winnerId === team.id && !isLevel;
+            const guess = tiebreak.guesses[team.id];
+            const distance =
+              tiebreak.revealed && guess !== undefined
+                ? Math.abs(guess - tiebreak.correctAnswer)
+                : null;
             return (
               <div
                 key={team.id}
                 className={cn(
                   "flex items-center justify-between gap-3 rounded-panel border p-3",
-                  isWinner ? "border-flame bg-flame/15" : "border-edge bg-surface"
+                  isWinner
+                    ? "border-flame bg-flame/15"
+                    : isLevel
+                      ? "border-danger/50 bg-danger/10"
+                      : "border-edge bg-surface"
                 )}
               >
-                <span className="flex items-center gap-2 text-ink">
+                <span className="flex flex-wrap items-center gap-2 text-ink">
                   {team.name}
                   {isWinner && <Badge tone="flame">Winner</Badge>}
+                  {isLevel && (
+                    <span className="rounded-chip border border-danger/50 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-danger uppercase">
+                      Level
+                    </span>
+                  )}
+                  {distance !== null && (
+                    <span className="text-xs text-ink-muted tabular-nums">{distance} away</span>
+                  )}
                 </span>
                 <input
                   type="number"
@@ -360,15 +474,46 @@ function TiebreakPanel({
 
       {tiebreak.revealed && (
         <div className="mt-6 border-t border-edge pt-5">
-          <Button variant="primary" size="lg" disabled={!winnerId || isSaving} onClick={confirmResult}>
-            {isSaving ? "Saving…" : "Confirm result & finish"}
+          {deadHeats.length > 0 && (
+            <p className="mb-3 rounded-panel border border-danger/50 bg-danger/10 px-4 py-3 text-sm text-ink">
+              <span className="font-display font-semibold tracking-wide text-danger uppercase">
+                Dead heat
+              </span>
+              <br />
+              {deadHeats
+                .map((group) =>
+                  group
+                    .map((teamId) => teams.find((team) => team.id === teamId)?.name ?? "?")
+                    .join(" and ")
+                )
+                .join("; ")}{" "}
+              — exactly as close as each other, so nobody has won yet.
+              {followUpsAvailable > 0
+                ? " Confirming pulls a fresh question and runs a decider between just them."
+                : " Add more tiebreak questions to the bank to run a decider."}
+            </p>
+          )}
+
+          <Button variant="primary" size="lg" disabled={!canProceed || isSaving} onClick={confirmResult}>
+            {isSaving
+              ? "Saving…"
+              : deadHeats.length > 0
+                ? "Run a decider"
+                : "Confirm result & finish"}
           </Button>
+
           <p className="mt-2 text-xs text-ink-muted">
-            {winnerId
-              ? "Records the placing and returns to the leaderboard, where the prize badge will appear."
-              : tiebreak.mode === "manual"
-                ? "Pick the winning team above first."
-                : "Enter each team's guess above first."}
+            {!tiebreak.revealed
+              ? null
+              : deadHeats.length > 0
+                ? followUpsAvailable > 0
+                  ? `${followUpsAvailable} unused question${followUpsAvailable === 1 ? "" : "s"} left in the bank.`
+                  : "No unused questions left — nothing to run a decider with."
+                : canProceed
+                  ? "Records the placing and returns to the leaderboard, where the prize badge will appear."
+                  : tiebreak.mode === "manual"
+                    ? "Pick the winning team above first."
+                    : "Enter every team's guess above first."}
           </p>
         </div>
       )}
@@ -463,7 +608,13 @@ function ControllerContent({ code }: { code: string }) {
       return <CodeGateLoading />;
     }
     return (
-      <TiebreakPanel quizId={quiz.id} hostUid={user.uid} tiebreak={liveState.tiebreak} teams={teams} />
+      <TiebreakPanel
+        quizId={quiz.id}
+        hostUid={user.uid}
+        tiebreak={liveState.tiebreak}
+        teams={teams}
+        tiebreakQuestions={tiebreakQuestions}
+      />
     );
   }
 
