@@ -30,19 +30,24 @@ export async function setRoundScore(
 
 /**
  * Marks a team correct on The Long Game for the given round, locking in
- * their points at (liveRealRoundCount - roundOrder + 1). `liveRealRoundCount`
- * must be the *current* count of real rounds, not a cached/stored value -
- * see the "numRounds can drift" note in the plan doc.
+ * their points at (liveRealRoundCount - roundPosition + 1).
+ *
+ * `roundPosition` must be the round's 1-indexed *position* among sorted
+ * real rounds (1st round = 1, 2nd = 2, ...) - NOT Round.order, which is a
+ * gapped sort key (10, 20, 30, ...) and would badly wrong the formula for
+ * any round past the first. `liveRealRoundCount` must likewise be the
+ * *current* count of real rounds, not a cached/stored value - see the
+ * "numRounds can drift" note in the plan doc.
  */
 export async function markLongGameCorrect(
   quizId: string,
   teamId: string,
-  roundOrder: number,
+  roundPosition: number,
   liveRealRoundCount: number
 ): Promise<void> {
   await setDoc(doc(db, "quizzes", quizId, "longGame", teamId), {
-    correctRoundOrder: roundOrder,
-    pointsAwarded: liveRealRoundCount - roundOrder + 1,
+    correctRoundPosition: roundPosition,
+    pointsAwarded: liveRealRoundCount - roundPosition + 1,
     lockedAt: serverTimestamp(),
   });
 }
@@ -50,7 +55,7 @@ export async function markLongGameCorrect(
 /** Undoes a Long Game correct-mark, e.g. if the host misclicked. */
 export async function clearLongGameResult(quizId: string, teamId: string): Promise<void> {
   await setDoc(doc(db, "quizzes", quizId, "longGame", teamId), {
-    correctRoundOrder: null,
+    correctRoundPosition: null,
     pointsAwarded: null,
     lockedAt: null,
   });

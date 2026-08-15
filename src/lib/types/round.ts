@@ -4,13 +4,13 @@ import type { Timestamp } from "firebase/firestore";
 export interface Round {
   id: string;
 
-  // 1-indexed position of this round within the quiz. Deliberately
-  // 1-indexed (not 0-indexed) so it plugs directly into the Long Game point
-  // formula (numRounds - order + 1) without any off-by-one adjustment.
-  //
-  // Uses gapped values (10, 20, 30, ...) rather than consecutive integers,
-  // so dragging a round to a new position only ever needs to update the
-  // 1-2 rounds it moved past, not renumber the whole list.
+  // A sort key, not a literal position count - uses gapped values (10, 20,
+  // 30, ...) rather than consecutive integers, so dragging a round to a
+  // new position only ever needs to update the 1-2 rounds it moved past,
+  // not renumber the whole list. Do NOT plug this into the Long Game point
+  // formula directly (numRounds - order + 1 is wrong for anything but the
+  // very first round) - that formula needs the round's actual 1-indexed
+  // *position* among sorted real rounds, e.g. realRounds.indexOf(round) + 1.
   order: number;
 
   title: string;

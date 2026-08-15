@@ -16,22 +16,29 @@ function TeamScoreRow({
   team,
   quizId,
   selectedRound,
+  // 1-indexed position of selectedRound among sorted real rounds (1st = 1,
+  // 2nd = 2, ...) - deliberately NOT selectedRound.order, which is a
+  // gapped sort key (10, 20, 30, ...) that would badly wrong the Long
+  // Game point formula for any round past the first. See the warning on
+  // Round.order.
+  roundPosition,
   raw,
   points,
   longGameEnabled,
   isLocked,
-  lockedRoundOrder,
+  lockedRoundPosition,
   lockedPoints,
   liveRealRoundCount,
 }: {
   team: Team;
   quizId: string;
   selectedRound: Round;
+  roundPosition: number;
   raw: number | undefined;
   points: number | undefined;
   longGameEnabled: boolean;
   isLocked: boolean;
-  lockedRoundOrder: number | null | undefined;
+  lockedRoundPosition: number | null | undefined;
   lockedPoints: number | null | undefined;
   liveRealRoundCount: number;
 }) {
@@ -63,14 +70,12 @@ function TeamScoreRow({
               onClick={() => clearLongGameResult(quizId, team.id)}
               className="text-xs text-amber-400 hover:underline"
             >
-              ✓ Round {lockedRoundOrder} ({lockedPoints} pts) — undo
+              ✓ Round {lockedRoundPosition} ({lockedPoints} pts) — undo
             </button>
           ) : (
             <button
               type="button"
-              onClick={() =>
-                markLongGameCorrect(quizId, team.id, selectedRound.order, liveRealRoundCount)
-              }
+              onClick={() => markLongGameCorrect(quizId, team.id, roundPosition, liveRealRoundCount)}
               className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300"
             >
               Mark correct
@@ -107,6 +112,7 @@ function ScoringContent({ code }: { code: string }) {
   const realRounds = rounds.filter((round) => !round.isLongGame);
   const selectedRound = realRounds.find((round) => round.id === selectedRoundId) ?? realRounds[0];
   const roundEntries = selectedRound ? (scores[selectedRound.id]?.entries ?? {}) : {};
+  const roundPosition = selectedRound ? realRounds.indexOf(selectedRound) + 1 : 0;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -154,11 +160,12 @@ function ScoringContent({ code }: { code: string }) {
                   team={team}
                   quizId={quiz.id}
                   selectedRound={selectedRound}
+                  roundPosition={roundPosition}
                   raw={entry?.raw}
                   points={entry?.points}
                   longGameEnabled={quiz.longGameEnabled}
-                  isLocked={longGameResult?.correctRoundOrder != null}
-                  lockedRoundOrder={longGameResult?.correctRoundOrder}
+                  isLocked={longGameResult?.correctRoundPosition != null}
+                  lockedRoundPosition={longGameResult?.correctRoundPosition}
                   lockedPoints={longGameResult?.pointsAwarded}
                   liveRealRoundCount={realRounds.length}
                 />
