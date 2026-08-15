@@ -9,6 +9,11 @@ import { useQuiz } from "@/lib/hooks/useQuiz";
 import { useRounds } from "@/lib/hooks/useRounds";
 import { uploadQuestionAudio, uploadQuestionImage } from "@/lib/media";
 import { addQuestion, deleteQuestion, swapQuestionOrder, updateQuestion } from "@/lib/questions";
+import {
+  exportQuestionsToTsv,
+  importQuestions,
+  parseQuestionsText,
+} from "@/lib/questionsImportExport";
 import { updateRound } from "@/lib/rounds";
 import type { AudioPlayMode, Question } from "@/lib/types/question";
 
@@ -236,6 +241,109 @@ function ListRoundEditor({
   );
 }
 
+/**
+ * Bulk question entry: export a round's questions to a downloadable .tsv
+ * file, or import from a paste (or an uploaded file loaded into the same
+ * textarea) - see lib/questionsImportExport.ts for the format. Import
+ * always appends to the round's existing questions, never replaces them.
+ */
+function ImportExportSection({
+  quizId,
+  roundId,
+  roundTitle,
+  questions,
+}: {
+  quizId: string;
+  roundId: string;
+  roundTitle: string;
+  questions: Question[];
+}) {
+  const [pasteText, setPasteText] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  function handleExport() {
+    const tsv = exportQuestionsToTsv(questions);
+    const blob = new Blob([tsv], { type: "text/tab-separated-values" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${roundTitle.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-questions.tsv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setPasteText(String(reader.result ?? ""));
+    reader.readAsText(file);
+  }
+
+  async function handleImport() {
+    const parsed = parseQuestionsText(pasteText);
+    if (parsed.length === 0) {
+      setMessage("No valid questions found - check the format below.");
+      return;
+    }
+    setIsImporting(true);
+    setMessage(null);
+    try {
+      await importQuestions(quizId, roundId, questions, parsed);
+      setPasteText("");
+      setMessage(`Imported ${parsed.length} question${parsed.length === 1 ? "" : "s"}.`);
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
+  return (
+    <div className="mb-6 rounded border border-neutral-800 bg-neutral-900 p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-sm font-medium text-neutral-100">Import / Export</h3>
+        <button
+          type="button"
+          disabled={questions.length === 0}
+          onClick={handleExport}
+          className="rounded border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 disabled:opacity-30"
+        >
+          Export as file
+        </button>
+      </div>
+      <p className="mb-2 text-xs text-neutral-500">
+        One question per line: Question, Answer, Points (optional, defaults to 1) - separated by
+        a Tab (paste straight from a spreadsheet) or a <code>|</code> pipe (if typing by hand).
+        Always adds to this round&apos;s existing questions, never replaces them.
+      </p>
+      <textarea
+        value={pasteText}
+        onChange={(event) => setPasteText(event.target.value)}
+        placeholder={"Capital of France|Paris|1\nCapital of Japan|Tokyo"}
+        rows={4}
+        className="mb-2 w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-xs text-neutral-100"
+      />
+      <div className="flex items-center gap-3">
+        <input
+          type="file"
+          accept=".tsv,.txt,.csv"
+          onChange={handleFileUpload}
+          className="text-xs text-neutral-400"
+        />
+        <button
+          type="button"
+          disabled={isImporting || !pasteText.trim()}
+          onClick={handleImport}
+          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 disabled:opacity-50"
+        >
+          {isImporting ? "Importing…" : "Import"}
+        </button>
+      </div>
+      {message && <p className="mt-2 text-xs text-neutral-400">{message}</p>}
+    </div>
+  );
+}
+
 function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
   const quiz = useQuiz(quizId);
   const rounds = useRounds(quizId);
@@ -296,6 +404,15 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
           n{"}"} is shown at the end of round {"{"}n{"}"}. Exactly one clue slot per real round is
           enforced automatically.
         </p>
+      )}
+
+      {!isLongGame && (
+        <ImportExportSection
+          quizId={quizId}
+          roundId={roundId}
+          roundTitle={round.title}
+          questions={questions}
+        />
       )}
 
       <div className="mb-4 flex items-center justify-between">
