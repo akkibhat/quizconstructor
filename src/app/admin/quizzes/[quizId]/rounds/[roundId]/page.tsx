@@ -12,6 +12,7 @@ import { addQuestion, deleteQuestion, swapQuestionOrder, updateQuestion } from "
 import {
   exportQuestionsToTsv,
   importQuestions,
+  parseAnswerList,
   parseQuestionsText,
 } from "@/lib/questionsImportExport";
 import { updateRound } from "@/lib/rounds";
@@ -186,8 +187,14 @@ function ListRoundEditor({
   roundId: string;
   title: string;
   listPrompt: string | null;
-  listAnswerReference: string | null;
+  listAnswerReference: string[] | null;
 }) {
+  // Tracks the parsed count live as the host types/pastes, so they can
+  // eyeball "did that paste actually give me 25 answers" before saving -
+  // the textarea itself still holds raw text; parseAnswerList only runs
+  // for real (and gets saved) on blur.
+  const [answerCount, setAnswerCount] = useState(listAnswerReference?.length ?? 0);
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
@@ -223,16 +230,25 @@ function ListRoundEditor({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="listAnswerReference" className="text-sm text-neutral-400">
-          Reference list
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="listAnswerReference" className="text-sm text-neutral-400">
+            Reference list
+          </label>
+          <span className="text-xs text-neutral-500">
+            {answerCount} answer{answerCount === 1 ? "" : "s"}
+          </span>
+        </div>
         <textarea
           id="listAnswerReference"
-          defaultValue={listAnswerReference ?? ""}
-          placeholder="Paste in the full valid-answer list - your own cheat sheet while marking, also shown to the room as the reveal afterwards"
-          onBlur={(event) =>
-            updateRound(quizId, roundId, { listAnswerReference: event.target.value })
-          }
+          defaultValue={listAnswerReference?.join("\n") ?? ""}
+          placeholder="Paste in the full valid-answer list, one per line - your own cheat sheet while marking, also shown to the room as the reveal afterwards. Numbering or bullets are fine, they'll be stripped automatically."
+          onChange={(event) => setAnswerCount(parseAnswerList(event.target.value).length)}
+          onBlur={(event) => {
+            const parsed = parseAnswerList(event.target.value);
+            event.target.value = parsed.join("\n");
+            setAnswerCount(parsed.length);
+            updateRound(quizId, roundId, { listAnswerReference: parsed });
+          }}
           className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-sm text-neutral-100"
           rows={16}
         />

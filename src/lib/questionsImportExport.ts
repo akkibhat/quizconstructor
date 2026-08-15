@@ -45,6 +45,28 @@ export function parseQuestionsText(input: string): ParsedQuestion[] {
     .filter((question) => question.text.length > 0);
 }
 
+/**
+ * Cleans up a pasted/typed answer list for The Gauntlet's reference list
+ * (see Round.listAnswerReference) into one trimmed answer per entry:
+ * splits on newlines, drops blank lines, and strips a leading list marker
+ * ("1.", "1)", "-", "•", "*") if present, so a numbered or bulleted paste
+ * comes out as a plain list either way.
+ *
+ * Scope note: this only handles one-answer-per-line input. It does NOT
+ * try to extract a single column out of a multi-column paste (e.g. a
+ * whole "rank / name / country / passengers" table copied straight from
+ * a Wikipedia-style page) - which column is "the answer" isn't reliably
+ * guessable, so that kind of source needs trimming down to just the
+ * answer names first.
+ */
+export function parseAnswerList(input: string): string[] {
+  return input
+    .split("\n")
+    .map((line) => line.trim())
+    .map((line) => line.replace(/^(\d+[.)]|[-•*])\s*/, "").trim())
+    .filter((line) => line.length > 0);
+}
+
 /** Appends parsed questions to the end of a round's existing question list, in one batch. */
 export async function importQuestions(
   quizId: string,

@@ -25,4 +25,4 @@ export type Slide =
   | { type: "list-prompt"; roundId: string; prompt: string }
   // The Gauntlet's reveal - the host's stored reference list, shown
   // instead of per-question answer slides.
-  | { type: "list-answer"; roundId: string; answerReference: string };
+  | { type: "list-answer"; roundId: string; answerReference: string[] };

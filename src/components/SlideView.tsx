@@ -77,9 +77,13 @@ export function SlideView({ slide }: { slide: Slide | undefined }) {
           <h2 className="text-2xl tracking-widest text-sky-400 uppercase">
             The Gauntlet — Answers
           </h2>
-          <div className="max-h-[70vh] max-w-4xl overflow-y-auto whitespace-pre-wrap text-center text-2xl text-neutral-100">
-            {slide.answerReference}
-          </div>
+          <ol className="grid max-h-[70vh] max-w-4xl grid-cols-2 gap-x-8 gap-y-2 overflow-y-auto text-2xl text-neutral-100">
+            {slide.answerReference.map((answer, index) => (
+              <li key={index} className="text-left">
+                <span className="text-sky-400">{index + 1}.</span> {answer}
+              </li>
+            ))}
+          </ol>
         </div>
       );
   }

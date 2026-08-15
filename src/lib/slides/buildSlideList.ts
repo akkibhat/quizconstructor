@@ -83,7 +83,7 @@ export function buildSlideList(
       slides.push({
         type: "list-answer",
         roundId: round.id,
-        answerReference: round.listAnswerReference ?? "",
+        answerReference: round.listAnswerReference ?? [],
       });
     } else {
       const questions = questionsByRound[round.id] ?? [];

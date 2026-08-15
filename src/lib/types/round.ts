@@ -48,10 +48,13 @@ export interface Round {
   // the world").
   listPrompt: string | null;
   // Only used when roundType === "list" (The Gauntlet). The valid-answer
-  // reference the host pastes in while building the round - doubles as
-  // both their own cheat sheet while marking and the "answer" slide
-  // revealed to the room afterwards.
-  listAnswerReference: string | null;
+  // reference - doubles as both the host's own cheat sheet while marking
+  // and the "answer" slide revealed to the room afterwards. Stored as a
+  // clean array of individual answers (one per entry), not raw pasted
+  // text - see parseAnswerList in lib/questionsImportExport.ts, which the
+  // round editor runs on whatever's pasted before saving, so a messy
+  // paste (extra numbering, blank lines) still ends up as a tidy list.
+  listAnswerReference: string[] | null;
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
