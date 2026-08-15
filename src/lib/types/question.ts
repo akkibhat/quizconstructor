@@ -28,6 +28,15 @@ export interface Question {
   text: string;
   answer: string;
 
+  // How many points this question is worth when fully correct - almost
+  // always 1, but editable for the occasional multi-part question (e.g. a
+  // full-name question worth 0.5 for each half) or a bonus question worth
+  // more. Used by electronic scoring, where the scorer awards a
+  // per-question point value (0, a partial amount, up to this max, or
+  // beyond it for a deliberate bonus) that gets summed into the round's
+  // total automatically - see lib/scoring.ts.
+  points: number;
+
   imagePath: string | null;
   audioPath: string | null;
   audioPlayMode: AudioPlayMode;

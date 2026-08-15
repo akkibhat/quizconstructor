@@ -107,13 +107,33 @@ function QuestionEditor({
       />
 
       {!isLongGame && (
-        <textarea
-          defaultValue={question.answer}
-          placeholder="Answer"
-          onBlur={(event) => updateQuestion(quizId, roundId, question.id, { answer: event.target.value })}
-          className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
-          rows={1}
-        />
+        <div className="flex gap-2">
+          <textarea
+            defaultValue={question.answer}
+            placeholder="Answer"
+            onBlur={(event) =>
+              updateQuestion(quizId, roundId, question.id, { answer: event.target.value })
+            }
+            className="flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
+            rows={1}
+          />
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              step={0.5}
+              min={0}
+              defaultValue={question.points}
+              onBlur={(event) =>
+                updateQuestion(quizId, roundId, question.id, {
+                  points: Number(event.target.value) || 0,
+                })
+              }
+              className="w-16 rounded border border-neutral-700 bg-neutral-950 px-2 py-2 text-neutral-100"
+              aria-label="Points"
+            />
+            <span className="text-xs text-neutral-500">pts</span>
+          </div>
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-4 text-sm">

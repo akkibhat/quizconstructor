@@ -145,6 +145,7 @@ export async function createQuiz(
           order: (i + 1) * 10,
           text: "",
           answer: "",
+          points: 1,
           imagePath: null,
           audioPath: null,
           audioPlayMode: null,
