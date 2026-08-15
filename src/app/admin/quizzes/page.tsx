@@ -15,12 +15,20 @@ function QuizzesList() {
     <div className="mx-auto max-w-2xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-100">My Quizzes</h1>
-        <Link
-          href="/admin/quizzes/new"
-          className="rounded bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900"
-        >
-          New Quiz
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/settings"
+            className="rounded border border-neutral-700 px-3 py-2 text-sm text-neutral-300"
+          >
+            Settings
+          </Link>
+          <Link
+            href="/admin/quizzes/new"
+            className="rounded bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900"
+          >
+            New Quiz
+          </Link>
+        </div>
       </div>
 
       {quizzes === undefined && <p className="text-neutral-400">Loading…</p>}

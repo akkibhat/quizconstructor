@@ -27,6 +27,15 @@ service cloud.firestore {
         && request.auth.uid == get(/databases/$(database)/documents/quizzes/$(quizId)).data.hostUid;
     }
 
+    // Global tiebreak question bank - NOT nested under any quiz, reused
+    // across all of them. Auth-only (no code-based read) since it isn't
+    // tied to a single quiz's access model at all - it's the host's own
+    // reusable content, not something a room full of guests should be
+    // able to browse via devtools.
+    match /tiebreakQuestions/{id} {
+      allow read, write: if isSignedIn();
+    }
+
     match /quizCodes/{code} {
       allow get: if true;
       allow list: if false;
