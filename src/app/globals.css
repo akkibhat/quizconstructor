@@ -55,11 +55,18 @@
      Gold above doubles as 1st. Both of these are light enough to carry
      the same near-black text as an orange fill.
 
+     Silver is a warm champagne rather than a true cool grey, so it isn't
+     the one cold colour in an otherwise warm palette. Saturation is what
+     keeps it honest: 0.09 against gold's 0.67, warm enough to belong and
+     nowhere near enough to read as pale gold. A genuinely warm pewter
+     was tried and dropped - it landed on exactly gold's luminance, so
+     1st and 2nd merged into one band from a distance.
+
      Bronze is deliberately lighter and less saturated than a traditional
      bronze (0.60 against flame's 0.75). Saturation is what separates it
      from flame by eye - a truer bronze sat right next to gold on the row
      above, and read as another orange next to a primary button. */
-  --color-silver: #cbd2d6;
+  --color-silver: #d9d3c5;
   --color-bronze: #b87a4a;
 
   /* --- Status -------------------------------------------------------- */
