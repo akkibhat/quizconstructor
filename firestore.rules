@@ -78,6 +78,12 @@ service cloud.firestore {
       match /scores/{roundId} {
         allow read: if true;
         allow write: if isHostOfQuiz(quizId);
+
+        // Per-question electronic-scoring marks - see lib/electronicScoring.ts.
+        match /questionMarks/{teamId} {
+          allow read: if true;
+          allow write: if isHostOfQuiz(quizId);
+        }
       }
 
       match /longGame/{teamId} {
