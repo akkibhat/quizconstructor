@@ -463,6 +463,25 @@ function ControllerContent({ code }: { code: string }) {
           </button>
           <span className="text-xs text-neutral-600">(or use arrow keys)</span>
         </div>
+
+        <div className="mt-3 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            disabled={stage === 0}
+            onClick={() => setLeaderboardRevealStage(quiz.id, 0, user.uid)}
+            className="text-xs text-neutral-500 hover:text-neutral-300 disabled:opacity-30"
+          >
+            Hide all
+          </button>
+          <button
+            type="button"
+            disabled={stage === 3}
+            onClick={() => setLeaderboardRevealStage(quiz.id, 3, user.uid)}
+            className="text-xs text-neutral-500 hover:text-neutral-300 disabled:opacity-30"
+          >
+            Show all now (skip the reveal)
+          </button>
+        </div>
       </div>
     );
   }

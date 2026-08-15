@@ -17,11 +17,37 @@ import type { Team } from "@/lib/types/team";
 
 type ScoringMode = "paper" | "electronic";
 
+const BONUS_AMOUNT = 1;
+
 /**
- * Quick correct/half/incorrect buttons for one question, for one team,
- * plus a custom entry for the rare bonus-points case. Awarding a mark here
- * immediately recomputes and writes that team's round total - see
- * setQuestionMark in lib/electronicScoring.ts.
+ * Reconstructs the "0 / 0.5 / 1 base" and "bonus on/off" button states
+ * from a single stored total, since the total is all that's persisted -
+ * there's no separate stored flag for "was the bonus button clicked".
+ * `1` is treated as "base 1, no bonus" rather than "base 0, bonus" since
+ * that's the far more common way to reach exactly 1; totals above 1 can
+ * only be explained by the bonus being active, so those decompose
+ * unambiguously.
+ */
+function inferBaseAndBonus(awarded: number | undefined): {
+  base: 0 | 0.5 | 1 | null;
+  bonusActive: boolean;
+} {
+  if (awarded === undefined) return { base: null, bonusActive: false };
+  if (awarded === 1) return { base: 1, bonusActive: false };
+  if (awarded === 0.5) return { base: 0.5, bonusActive: false };
+  if (awarded >= 1 + BONUS_AMOUNT) return { base: 1, bonusActive: true };
+  if (awarded === 0.5 + BONUS_AMOUNT) return { base: 0.5, bonusActive: true };
+  return { base: 0, bonusActive: false };
+}
+
+/**
+ * Marking for one question, for one team: a fixed 0 / 0.5 / 1 base score,
+ * plus an independent Bonus toggle that adds on top of whichever base is
+ * selected (rather than being another alternative in the same group) -
+ * covers the "90% of the time it's 1 point, sometimes half credit for a
+ * two-part answer, rarely a bonus point" marking pattern in one row.
+ * Awarding immediately recomputes and writes that team's round total -
+ * see setQuestionMark in lib/electronicScoring.ts.
  */
 function QuestionMarkRow({
   quizId,
@@ -34,19 +60,23 @@ function QuestionMarkRow({
   quizId: string;
   roundId: string;
   teamId: string;
-  question: { id: string; text: string; answer: string; points: number };
+  question: { id: string; text: string; answer: string };
   currentMarks: Record<string, number>;
   isDoubled: boolean;
 }) {
   const awarded = currentMarks[question.id];
-  // Defensively defaulted - `points` was added to Question after some
-  // test data existed, and Firestore rejects `undefined` field values
-  // outright (this bit once already: clicking "Full" on a legacy
-  // no-points question tried to write `undefined` into the marks map).
-  const maxPoints = question.points ?? 1;
+  const { base, bonusActive } = inferBaseAndBonus(awarded);
 
   function mark(points: number) {
     setQuestionMark(quizId, roundId, teamId, question.id, points, currentMarks, isDoubled);
+  }
+
+  function selectBase(newBase: 0 | 0.5 | 1) {
+    mark(newBase + (bonusActive ? BONUS_AMOUNT : 0));
+  }
+
+  function toggleBonus() {
+    mark((base ?? 0) + (bonusActive ? 0 : BONUS_AMOUNT));
   }
 
   return (
@@ -58,51 +88,48 @@ function QuestionMarkRow({
       <div className="flex shrink-0 items-center gap-1">
         <button
           type="button"
-          onClick={() => mark(0)}
+          onClick={() => selectBase(0)}
           className={`rounded border px-2 py-1 text-xs ${
-            awarded === 0
+            base === 0
               ? "border-red-700 bg-red-950 text-red-300"
               : "border-neutral-700 text-neutral-400"
           }`}
         >
           0
         </button>
-        {maxPoints > 1 && (
-          <button
-            type="button"
-            onClick={() => mark(maxPoints / 2)}
-            className={`rounded border px-2 py-1 text-xs ${
-              awarded === maxPoints / 2
-                ? "border-amber-700 bg-amber-950 text-amber-300"
-                : "border-neutral-700 text-neutral-400"
-            }`}
-          >
-            ½
-          </button>
-        )}
         <button
           type="button"
-          onClick={() => mark(maxPoints)}
+          onClick={() => selectBase(0.5)}
           className={`rounded border px-2 py-1 text-xs ${
-            awarded === maxPoints
+            base === 0.5
+              ? "border-amber-700 bg-amber-950 text-amber-300"
+              : "border-neutral-700 text-neutral-400"
+          }`}
+        >
+          0.5
+        </button>
+        <button
+          type="button"
+          onClick={() => selectBase(1)}
+          className={`rounded border px-2 py-1 text-xs ${
+            base === 1
               ? "border-emerald-700 bg-emerald-950 text-emerald-300"
               : "border-neutral-700 text-neutral-400"
           }`}
         >
-          Full ({maxPoints})
+          1
         </button>
-        <input
-          type="number"
-          step={0.5}
-          placeholder="…"
-          value={awarded !== undefined && ![0, maxPoints / 2, maxPoints].includes(awarded) ? awarded : ""}
-          onChange={(event) => {
-            const value = Number(event.target.value);
-            if (!Number.isNaN(value)) mark(value);
-          }}
-          className="w-14 rounded border border-neutral-700 bg-neutral-950 px-1 py-1 text-center text-xs text-neutral-100"
-          aria-label="Custom points (e.g. for a bonus)"
-        />
+        <button
+          type="button"
+          onClick={toggleBonus}
+          className={`rounded border px-2 py-1 text-xs ${
+            bonusActive
+              ? "border-purple-700 bg-purple-950 text-purple-300"
+              : "border-neutral-700 text-neutral-400"
+          }`}
+        >
+          Bonus (+{BONUS_AMOUNT})
+        </button>
       </div>
     </li>
   );
