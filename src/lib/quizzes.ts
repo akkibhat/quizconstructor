@@ -1,6 +1,8 @@
 import {
   collection,
   doc,
+  getDoc,
+  getDocs,
   runTransaction,
   serverTimestamp,
   Timestamp,
@@ -10,6 +12,8 @@ import {
 
 import { generateQuizCode } from "@/lib/codeGen";
 import { db } from "@/lib/firebase/client";
+import type { Question } from "@/lib/types/question";
+import type { Round } from "@/lib/types/round";
 
 export interface CreateQuizInput {
   title: string;
@@ -176,4 +180,125 @@ export async function unarchiveQuiz(quizId: string): Promise<void> {
     archived: false,
     updatedAt: serverTimestamp(),
   });
+}
+
+/**
+ * Clones a quiz - every round and every question/clue, exactly as-is -
+ * into a brand new quiz with its own fresh code. Same two-phase
+ * create-then-scaffold approach as createQuiz, for the same
+ * security-rules reason (rounds/questions need the quiz doc to already
+ * exist so their write rules can look up hostUid).
+ *
+ * Media (images/audio) is NOT copied in Storage - the cloned question
+ * docs keep pointing at the *original* quiz's Storage paths. This is
+ * deliberate, not an oversight: quizzes are only ever archived, never
+ * hard-deleted (see the note on Quiz.archived), so the original's files
+ * are never at risk of disappearing out from under the clone. Copying the
+ * actual file bytes would mean downloading and re-uploading every image
+ * and audio file for no real benefit.
+ */
+export async function duplicateQuiz(
+  quizId: string,
+  hostUid: string
+): Promise<{ quizId: string; code: string }> {
+  const sourceQuizSnap = await getDoc(doc(db, "quizzes", quizId));
+  if (!sourceQuizSnap.exists()) {
+    throw new Error("Quiz not found.");
+  }
+  const sourceQuiz = sourceQuizSnap.data();
+
+  const sourceRoundsSnap = await getDocs(collection(db, "quizzes", quizId, "rounds"));
+  const sourceRounds = sourceRoundsSnap.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as Omit<Round, "id">),
+  }));
+
+  const questionsByRoundId: Record<string, Question[]> = {};
+  for (const round of sourceRounds) {
+    const questionsSnap = await getDocs(
+      collection(db, "quizzes", quizId, "rounds", round.id, "questions")
+    );
+    questionsByRoundId[round.id] = questionsSnap.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as Omit<Question, "id">),
+    }));
+  }
+
+  for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
+    const code = generateQuizCode();
+    const newQuizRef = doc(collection(db, "quizzes"));
+    const quizCodeRef = doc(db, "quizCodes", code);
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const existingCode = await transaction.get(quizCodeRef);
+        if (existingCode.exists()) {
+          throw new CodeCollisionError();
+        }
+
+        transaction.set(quizCodeRef, { quizId: newQuizRef.id });
+        transaction.set(newQuizRef, {
+          title: `${sourceQuiz.title} (Copy)`,
+          date: sourceQuiz.date,
+          code,
+          hostUid,
+          numRounds: sourceQuiz.numRounds,
+          longGameEnabled: sourceQuiz.longGameEnabled,
+          longGameFinalAnswer: sourceQuiz.longGameFinalAnswer,
+          longGameMaxPoints: sourceQuiz.longGameMaxPoints,
+          doublePointsEnabled: sourceQuiz.doublePointsEnabled,
+          doublePointsPicksPerTeam: sourceQuiz.doublePointsPicksPerTeam,
+          status: "setup",
+          archived: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      });
+    } catch (error) {
+      if (error instanceof CodeCollisionError) {
+        continue;
+      }
+      throw error;
+    }
+
+    const batch = writeBatch(db);
+    for (const round of sourceRounds) {
+      const newRoundRef = doc(collection(db, "quizzes", newQuizRef.id, "rounds"));
+      batch.set(newRoundRef, {
+        order: round.order,
+        title: round.title,
+        isLongGame: round.isLongGame,
+        // Defensively defaulted - these fields were added after some test
+        // data existed, and Firestore rejects `undefined` in a write.
+        roundType: round.roundType ?? "standard",
+        listPrompt: round.listPrompt ?? null,
+        listAnswerReference: round.listAnswerReference ?? null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      for (const question of questionsByRoundId[round.id] ?? []) {
+        const newQuestionRef = doc(
+          collection(db, "quizzes", newQuizRef.id, "rounds", newRoundRef.id, "questions")
+        );
+        batch.set(newQuestionRef, {
+          order: question.order,
+          text: question.text,
+          answer: question.answer,
+          // Defensively defaulted - added after some test data existed.
+          points: question.points ?? 1,
+          imagePath: question.imagePath,
+          audioPath: question.audioPath,
+          audioPlayMode: question.audioPlayMode,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
+    await batch.commit();
+
+    return { quizId: newQuizRef.id, code };
+  }
+
+  throw new Error("Could not generate a unique quiz code after several attempts.");
 }

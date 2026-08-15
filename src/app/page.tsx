@@ -1,69 +1,146 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { signOut } from "firebase/auth";
+import Link from "next/link";
+import { useState } from "react";
+
+import { RequireAuth } from "@/components/RequireAuth";
+import { auth } from "@/lib/firebase/client";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { useQuizzes } from "@/lib/hooks/useQuizzes";
+import { archiveQuiz, duplicateQuiz } from "@/lib/quizzes";
+import type { Quiz } from "@/lib/types/quiz";
+
+// The live, code-gated views for a quiz, with host-friendly labels
+// (rather than the internal route names) - this is the "what pages are
+// available" quick-access row for each quiz on the dashboard.
+function liveLinksFor(code: string) {
+  return [
+    { label: "Team Setup", href: `/team-setup/${code}` },
+    { label: "Run Quiz", href: `/control/${code}` },
+    { label: "Projector", href: `/display/${code}` },
+    { label: "Scoring", href: `/scoring/${code}` },
+    { label: "Leaderboard", href: `/leaderboard/${code}` },
+  ];
+}
+
+function QuizRow({ quiz }: { quiz: Quiz }) {
+  const [isDuplicating, setIsDuplicating] = useState(false);
+
+  async function handleDuplicate() {
+    setIsDuplicating(true);
+    try {
+      await duplicateQuiz(quiz.id, quiz.hostUid);
+    } finally {
+      setIsDuplicating(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <li className="rounded border border-neutral-800 bg-neutral-900 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <Link href={`/admin/quizzes/${quiz.id}`} className="text-lg text-neutral-100 hover:underline">
+          {quiz.title}
+        </Link>
+        <span className="font-mono text-sm text-neutral-500">{quiz.code}</span>
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {liveLinksFor(quiz.code).map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="rounded border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 hover:border-neutral-500"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            {link.label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Link
+          href={`/admin/quizzes/${quiz.id}`}
+          className="rounded border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400"
+        >
+          Edit
+        </Link>
+        <button
+          type="button"
+          disabled={isDuplicating}
+          onClick={handleDuplicate}
+          className="rounded border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 disabled:opacity-50"
+        >
+          {isDuplicating ? "Duplicating…" : "Duplicate"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm(`Delete "${quiz.title}"?`)) {
+              archiveQuiz(quiz.id);
+            }
+          }}
+          className="rounded border border-red-900 px-2.5 py-1 text-xs text-red-400"
+        >
+          Delete
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function Dashboard() {
+  const { user } = useAuth();
+  const quizzes = useQuizzes(user?.uid);
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-10">
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-neutral-100">QuizConstructor</h1>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/settings"
+            className="rounded border border-neutral-700 px-3 py-2 text-sm text-neutral-300"
           >
-            Documentation
-          </a>
+            Settings
+          </Link>
+          <button
+            type="button"
+            onClick={() => signOut(auth)}
+            className="rounded border border-neutral-700 px-3 py-2 text-sm text-neutral-300"
+          >
+            Sign Out
+          </button>
         </div>
-      </main>
+      </div>
+
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-lg font-medium text-neutral-100">My Quizzes</h2>
+        <Link
+          href="/admin/quizzes/new"
+          className="rounded bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900"
+        >
+          New Quiz
+        </Link>
+      </div>
+
+      {quizzes === undefined && <p className="text-neutral-400">Loading…</p>}
+      {quizzes?.length === 0 && (
+        <p className="text-neutral-400">No quizzes yet — create your first one to get started.</p>
+      )}
+
+      <ul className="space-y-3">
+        {quizzes?.map((quiz) => (
+          <QuizRow key={quiz.id} quiz={quiz} />
+        ))}
+      </ul>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <RequireAuth>
+      <Dashboard />
+    </RequireAuth>
   );
 }

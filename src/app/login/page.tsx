@@ -22,7 +22,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/admin/quizzes");
+      router.push("/");
     } catch {
       setError("Couldn't sign in - check the email and password and try again.");
     } finally {

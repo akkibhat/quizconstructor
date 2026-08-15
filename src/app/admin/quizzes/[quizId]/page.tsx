@@ -109,10 +109,10 @@ function QuizEditor({ quizId }: { quizId: string }) {
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link
-        href="/admin/quizzes"
+        href="/"
         className="mb-4 inline-block text-sm text-neutral-400 hover:text-neutral-200"
       >
-        ← Back to my quizzes
+        ← Back to dashboard
       </Link>
 
       <div className="mb-2 flex items-center justify-between">
