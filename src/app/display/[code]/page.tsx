@@ -2,6 +2,7 @@
 
 import { use } from "react";
 
+import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { LeaderboardView } from "@/components/LeaderboardView";
 import { SlideView } from "@/components/SlideView";
 import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
@@ -73,17 +74,15 @@ function DisplayContent({ code }: { code: string }) {
   const teams = useTeams(quiz?.id);
 
   if (quiz === undefined) {
-    return <p className="text-2xl text-neutral-500">Loading…</p>;
+    return <CodeGateLoading variant="screen" />;
   }
 
   if (quiz === null) {
-    return (
-      <p className="text-2xl text-neutral-500">No quiz found for code &quot;{code}&quot;.</p>
-    );
+    return <CodeNotFound code={code} variant="screen" />;
   }
 
   if (liveState === undefined || slides === undefined) {
-    return <p className="text-2xl text-neutral-500">Loading…</p>;
+    return <CodeGateLoading variant="screen" />;
   }
 
   if (liveState === null) {
@@ -97,7 +96,7 @@ function DisplayContent({ code }: { code: string }) {
 
   if (liveState.mode === "leaderboard") {
     if (leaderboard === undefined) {
-      return <p className="text-2xl text-neutral-500">Loading…</p>;
+      return <CodeGateLoading variant="screen" />;
     }
     return <LeaderboardView entries={leaderboard} revealStage={liveState.leaderboardRevealStage} />;
   }
@@ -108,7 +107,7 @@ function DisplayContent({ code }: { code: string }) {
 
   if (liveState.mode === "tiebreak" && liveState.tiebreak) {
     if (teams === undefined) {
-      return <p className="text-2xl text-neutral-500">Loading…</p>;
+      return <CodeGateLoading variant="screen" />;
     }
     return <TiebreakDisplay tiebreak={liveState.tiebreak} teams={teams} />;
   }

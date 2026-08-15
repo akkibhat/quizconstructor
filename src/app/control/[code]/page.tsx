@@ -2,6 +2,7 @@
 
 import { use, useEffect, useRef, useState } from "react";
 
+import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { LeaderboardView } from "@/components/LeaderboardView";
 import { RequireAuth } from "@/components/RequireAuth";
 import { SlideView } from "@/components/SlideView";
@@ -353,15 +354,15 @@ function ControllerContent({ code }: { code: string }) {
   }, [quiz, slides, liveState, user]);
 
   if (quiz === undefined || !user) {
-    return <p className="p-10 text-neutral-400">Loading…</p>;
+    return <CodeGateLoading />;
   }
 
   if (quiz === null) {
-    return <p className="p-10 text-neutral-400">No quiz found for code &quot;{code}&quot;.</p>;
+    return <CodeNotFound code={code} />;
   }
 
   if (slides === undefined || liveState === undefined) {
-    return <p className="p-10 text-neutral-400">Loading…</p>;
+    return <CodeGateLoading />;
   }
 
   if (liveState === null) {
@@ -381,7 +382,7 @@ function ControllerContent({ code }: { code: string }) {
 
   if (liveState.mode === "tiebreak" && liveState.tiebreak) {
     if (teams === undefined) {
-      return <p className="p-10 text-neutral-400">Loading…</p>;
+      return <CodeGateLoading />;
     }
     return (
       <TiebreakPanel quizId={quiz.id} hostUid={user.uid} tiebreak={liveState.tiebreak} teams={teams} />
@@ -410,7 +411,7 @@ function ControllerContent({ code }: { code: string }) {
 
   if (liveState.mode === "leaderboard") {
     if (leaderboard === undefined) {
-      return <p className="p-10 text-neutral-400">Loading…</p>;
+      return <CodeGateLoading />;
     }
 
     const stage = liveState.leaderboardRevealStage;

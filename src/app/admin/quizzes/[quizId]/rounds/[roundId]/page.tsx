@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { use, useState } from "react";
 
+import { CodeGateLoading, NotFoundPanel } from "@/components/CodeGateStatus";
 import { RequireAuth } from "@/components/RequireAuth";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useQuestions } from "@/lib/hooks/useQuestions";
 import { useQuiz } from "@/lib/hooks/useQuiz";
 import { useRounds } from "@/lib/hooks/useRounds";
@@ -25,6 +27,7 @@ function QuestionEditor({
   quizId,
   roundId,
   isLongGame,
+  confirmDialog,
 }: {
   question: Question;
   index: number;
@@ -32,6 +35,7 @@ function QuestionEditor({
   quizId: string;
   roundId: string;
   isLongGame: boolean;
+  confirmDialog: (message: string) => Promise<boolean>;
 }) {
   const [uploading, setUploading] = useState(false);
 
@@ -92,8 +96,8 @@ function QuestionEditor({
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm(isLongGame ? "Delete this clue?" : "Delete this question?")) {
+            onClick={async () => {
+              if (await confirmDialog(isLongGame ? "Delete this clue?" : "Delete this question?")) {
                 deleteQuestion(quizId, roundId, question.id);
               }
             }}
@@ -364,17 +368,20 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
   const quiz = useQuiz(quizId);
   const rounds = useRounds(quizId);
   const questions = useQuestions(quizId, roundId);
+  const { confirmDialog, dialog } = useConfirmDialog();
 
   const round = rounds?.find((r) => r.id === roundId);
   const isLongGame = round?.isLongGame ?? false;
   const realRoundCount = rounds?.filter((r) => !r.isLongGame).length ?? 0;
 
   if (quiz === undefined || rounds === undefined || questions === undefined) {
-    return <p className="p-10 text-neutral-400">Loading…</p>;
+    return <CodeGateLoading />;
   }
 
   if (quiz === null || !round) {
-    return <p className="p-10 text-neutral-400">No such round.</p>;
+    return (
+      <NotFoundPanel title="Round not found" message="This round doesn't exist, or was deleted." />
+    );
   }
 
   if (round.roundType === "list") {
@@ -451,19 +458,30 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
         </p>
       )}
 
-      <ul className="space-y-3">
-        {questions.map((question, index) => (
-          <QuestionEditor
-            key={question.id}
-            question={question}
-            index={index}
-            questions={questions}
-            quizId={quizId}
-            roundId={roundId}
-            isLongGame={isLongGame}
-          />
-        ))}
-      </ul>
+      {questions.length === 0 ? (
+        <p className="rounded border border-dashed border-neutral-800 px-4 py-8 text-center text-sm text-neutral-500">
+          {isLongGame
+            ? "No clues yet — add your first one, starting with the vaguest."
+            : "No questions yet — add your first one, or paste a batch in via Import above."}
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {questions.map((question, index) => (
+            <QuestionEditor
+              key={question.id}
+              question={question}
+              index={index}
+              questions={questions}
+              quizId={quizId}
+              roundId={roundId}
+              isLongGame={isLongGame}
+              confirmDialog={confirmDialog}
+            />
+          ))}
+        </ul>
+      )}
+
+      {dialog}
     </div>
   );
 }

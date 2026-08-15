@@ -4,7 +4,9 @@ import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { use } from "react";
 
+import { CodeGateLoading, NotFoundPanel } from "@/components/CodeGateStatus";
 import { RequireAuth } from "@/components/RequireAuth";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useQuestions } from "@/lib/hooks/useQuestions";
 import { useQuiz } from "@/lib/hooks/useQuiz";
 import { useRounds } from "@/lib/hooks/useRounds";
@@ -24,23 +26,27 @@ function RoundRow({
   realRounds,
   quizId,
   longGameClueCount,
+  confirmDialog,
+  alertDialog,
 }: {
   round: Round;
   index: number;
   realRounds: Round[];
   quizId: string;
   longGameClueCount: number;
+  confirmDialog: (message: string) => Promise<boolean>;
+  alertDialog: (message: string) => Promise<void>;
 }) {
   const canMoveUp = index > 0;
   const canMoveDown = index < realRounds.length - 1;
 
   async function handleDelete() {
-    if (!confirm(`Delete "${round.title}" and all its questions?`)) return;
+    if (!(await confirmDialog(`Delete "${round.title}" and all its questions?`))) return;
     try {
       await deleteRound(quizId, round.id, realRounds.length - 1, longGameClueCount);
     } catch (error) {
       if (error instanceof TooFewRoundsForLongGameError) {
-        alert(error.message);
+        await alertDialog(error.message);
         return;
       }
       throw error;
@@ -139,17 +145,18 @@ function LiveLinksSection({ code }: { code: string }) {
 function QuizEditor({ quizId }: { quizId: string }) {
   const quiz = useQuiz(quizId);
   const rounds = useRounds(quizId);
+  const { confirmDialog, alertDialog, dialog } = useConfirmDialog();
 
   const longGameRound = rounds?.find((r) => r.isLongGame);
   const realRounds = rounds?.filter((r) => !r.isLongGame) ?? [];
   const longGameClues = useQuestions(quizId, longGameRound?.id);
 
   if (quiz === undefined || rounds === undefined) {
-    return <p className="p-10 text-neutral-400">Loading…</p>;
+    return <CodeGateLoading />;
   }
 
   if (quiz === null) {
-    return <p className="p-10 text-neutral-400">No such quiz.</p>;
+    return <NotFoundPanel title="Quiz not found" message="This quiz doesn't exist, or was deleted." />;
   }
 
   return (
@@ -201,7 +208,7 @@ function QuizEditor({ quizId }: { quizId: string }) {
                   await addListRound(quizId, realRounds);
                 } catch (error) {
                   if (error instanceof ListRoundAlreadyExistsError) {
-                    alert(error.message);
+                    await alertDialog(error.message);
                     return;
                   }
                   throw error;
@@ -222,18 +229,28 @@ function QuizEditor({ quizId }: { quizId: string }) {
         </div>
       </div>
 
-      <ul className="space-y-2">
-        {realRounds.map((round, index) => (
-          <RoundRow
-            key={round.id}
-            round={round}
-            index={index}
-            realRounds={realRounds}
-            quizId={quizId}
-            longGameClueCount={longGameClues?.length ?? 0}
-          />
-        ))}
-      </ul>
+      {realRounds.length === 0 ? (
+        <p className="rounded border border-dashed border-neutral-800 px-4 py-8 text-center text-sm text-neutral-500">
+          No rounds yet — add your first one to start building this quiz.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {realRounds.map((round, index) => (
+            <RoundRow
+              key={round.id}
+              round={round}
+              index={index}
+              realRounds={realRounds}
+              quizId={quizId}
+              longGameClueCount={longGameClues?.length ?? 0}
+              confirmDialog={confirmDialog}
+              alertDialog={alertDialog}
+            />
+          ))}
+        </ul>
+      )}
+
+      {dialog}
     </div>
   );
 }

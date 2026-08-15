@@ -2,7 +2,9 @@
 
 import { use, useState } from "react";
 
+import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { RequireAuth } from "@/components/RequireAuth";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useQuizByCode } from "@/lib/hooks/useQuizByCode";
 import { useRounds } from "@/lib/hooks/useRounds";
 import { useTeams } from "@/lib/hooks/useTeams";
@@ -107,10 +109,12 @@ function TeamRow({
   team,
   realRounds,
   quizId,
+  confirmDialog,
 }: {
   team: Team;
   realRounds: Round[];
   quizId: string;
+  confirmDialog: (message: string) => Promise<boolean>;
 }) {
   const pickedTitles = team.doubleRoundPicks
     .map((roundId) => realRounds.find((r) => r.id === roundId)?.title)
@@ -126,8 +130,8 @@ function TeamRow({
       </div>
       <button
         type="button"
-        onClick={() => {
-          if (confirm(`Remove "${team.name}"?`)) {
+        onClick={async () => {
+          if (await confirmDialog(`Remove "${team.name}"?`)) {
             deleteTeam(quizId, team.id);
           }
         }}
@@ -143,13 +147,14 @@ function TeamSetup({ code }: { code: string }) {
   const quiz = useQuizByCode(code);
   const rounds = useRounds(quiz?.id);
   const teams = useTeams(quiz?.id);
+  const { confirmDialog, dialog } = useConfirmDialog();
 
   if (quiz === undefined || rounds === undefined || teams === undefined) {
-    return <p className="p-10 text-neutral-400">Loading…</p>;
+    return <CodeGateLoading />;
   }
 
   if (quiz === null) {
-    return <p className="p-10 text-neutral-400">No quiz found for code &quot;{code}&quot;.</p>;
+    return <CodeNotFound code={code} />;
   }
 
   const realRounds = rounds.filter((r) => !r.isLongGame);
@@ -177,9 +182,17 @@ function TeamSetup({ code }: { code: string }) {
       <h2 className="mb-3 text-lg font-medium text-neutral-100">Teams ({teams.length})</h2>
       <ul className="space-y-2">
         {teams.map((team) => (
-          <TeamRow key={team.id} team={team} realRounds={realRounds} quizId={quiz.id} />
+          <TeamRow
+            key={team.id}
+            team={team}
+            realRounds={realRounds}
+            quizId={quiz.id}
+            confirmDialog={confirmDialog}
+          />
         ))}
       </ul>
+
+      {dialog}
     </div>
   );
 }

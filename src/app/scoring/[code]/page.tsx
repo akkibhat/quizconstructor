@@ -2,6 +2,7 @@
 
 import { use, useState } from "react";
 
+import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { RequireAuth } from "@/components/RequireAuth";
 import { setQuestionMark } from "@/lib/electronicScoring";
 import { useLongGameResults } from "@/lib/hooks/useLongGameResults";
@@ -382,11 +383,11 @@ function ScoringContent({ code }: { code: string }) {
     scores === undefined ||
     (quiz?.longGameEnabled && longGameResults === undefined)
   ) {
-    return <p className="p-10 text-neutral-400">Loading…</p>;
+    return <CodeGateLoading />;
   }
 
   if (quiz === null) {
-    return <p className="p-10 text-neutral-400">No quiz found for code &quot;{code}&quot;.</p>;
+    return <CodeNotFound code={code} />;
   }
 
   const realRounds = rounds.filter((round) => !round.isLongGame);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { RequireAuth } from "@/components/RequireAuth";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useTiebreakQuestions } from "@/lib/hooks/useTiebreakQuestions";
 import {
   addTiebreakQuestion,
@@ -12,7 +13,13 @@ import {
 } from "@/lib/tiebreakQuestions";
 import type { TiebreakQuestion } from "@/lib/types/tiebreakQuestion";
 
-function TiebreakQuestionRow({ item }: { item: TiebreakQuestion }) {
+function TiebreakQuestionRow({
+  item,
+  confirmDialog,
+}: {
+  item: TiebreakQuestion;
+  confirmDialog: (message: string) => Promise<boolean>;
+}) {
   return (
     <li className="space-y-2 rounded border border-neutral-800 bg-neutral-900 p-4">
       <div className="flex items-start justify-between gap-4">
@@ -24,8 +31,10 @@ function TiebreakQuestionRow({ item }: { item: TiebreakQuestion }) {
         />
         <button
           type="button"
-          onClick={() => {
-            if (confirm("Delete this tiebreak question?")) deleteTiebreakQuestion(item.id);
+          onClick={async () => {
+            if (await confirmDialog("Delete this tiebreak question?")) {
+              deleteTiebreakQuestion(item.id);
+            }
           }}
           className="rounded border border-red-900 px-2 py-1 text-xs text-red-400"
         >
@@ -102,6 +111,7 @@ function AddTiebreakQuestionForm() {
 
 function SettingsContent() {
   const questions = useTiebreakQuestions();
+  const { confirmDialog, dialog } = useConfirmDialog();
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -130,9 +140,11 @@ function SettingsContent() {
 
       <ul className="space-y-2">
         {questions?.map((item) => (
-          <TiebreakQuestionRow key={item.id} item={item} />
+          <TiebreakQuestionRow key={item.id} item={item} confirmDialog={confirmDialog} />
         ))}
       </ul>
+
+      {dialog}
     </div>
   );
 }

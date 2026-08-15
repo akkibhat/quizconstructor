@@ -7,6 +7,7 @@ import { useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { auth } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useQuizzes } from "@/lib/hooks/useQuizzes";
 import { archiveQuiz, duplicateQuiz } from "@/lib/quizzes";
 import type { Quiz } from "@/lib/types/quiz";
@@ -24,7 +25,13 @@ function liveLinksFor(code: string) {
   ];
 }
 
-function QuizRow({ quiz }: { quiz: Quiz }) {
+function QuizRow({
+  quiz,
+  confirmDialog,
+}: {
+  quiz: Quiz;
+  confirmDialog: (message: string) => Promise<boolean>;
+}) {
   const [isDuplicating, setIsDuplicating] = useState(false);
 
   async function handleDuplicate() {
@@ -74,8 +81,8 @@ function QuizRow({ quiz }: { quiz: Quiz }) {
         </button>
         <button
           type="button"
-          onClick={() => {
-            if (confirm(`Delete "${quiz.title}"?`)) {
+          onClick={async () => {
+            if (await confirmDialog(`Delete "${quiz.title}"?`)) {
               archiveQuiz(quiz.id);
             }
           }}
@@ -91,6 +98,7 @@ function QuizRow({ quiz }: { quiz: Quiz }) {
 function Dashboard() {
   const { user } = useAuth();
   const quizzes = useQuizzes(user?.uid);
+  const { confirmDialog, dialog } = useConfirmDialog();
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -130,9 +138,11 @@ function Dashboard() {
 
       <ul className="space-y-3">
         {quizzes?.map((quiz) => (
-          <QuizRow key={quiz.id} quiz={quiz} />
+          <QuizRow key={quiz.id} quiz={quiz} confirmDialog={confirmDialog} />
         ))}
       </ul>
+
+      {dialog}
     </div>
   );
 }

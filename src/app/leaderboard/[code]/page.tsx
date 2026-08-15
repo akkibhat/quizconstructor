@@ -2,6 +2,7 @@
 
 import { use } from "react";
 
+import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { LeaderboardView } from "@/components/LeaderboardView";
 import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
 import { useLiveState } from "@/lib/hooks/useLiveState";
@@ -17,15 +18,15 @@ function LeaderboardContent({ code }: { code: string }) {
   const leaderboard = useLeaderboardTotals(quiz?.id);
 
   if (quiz === undefined) {
-    return <p className="text-2xl text-neutral-500">Loading…</p>;
+    return <CodeGateLoading variant="screen" />;
   }
 
   if (quiz === null) {
-    return <p className="text-2xl text-neutral-500">No quiz found for code &quot;{code}&quot;.</p>;
+    return <CodeNotFound code={code} variant="screen" />;
   }
 
   if (liveState === undefined || leaderboard === undefined) {
-    return <p className="text-2xl text-neutral-500">Loading…</p>;
+    return <CodeGateLoading variant="screen" />;
   }
 
   return (

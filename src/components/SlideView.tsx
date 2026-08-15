@@ -4,6 +4,37 @@ import { useMediaUrl } from "@/lib/hooks/useMediaUrl";
 import type { Slide } from "@/lib/types/slide";
 
 /**
+ * Small uppercase label shown above a slide's main content - identifies
+ * what's on screen at a glance (a special round type, or just a plain
+ * Question/Answer). Same size/tracking everywhere; only the color
+ * changes, reserved for the two special round types (amber = The Long
+ * Game, sky = The Gauntlet) so a plain question/answer slide still gets a
+ * label instead of looking flatter than the special ones next to it.
+ */
+function Eyebrow({
+  text,
+  colorClassName = "text-neutral-500",
+}: {
+  text: string;
+  colorClassName?: string;
+}) {
+  return <h2 className={`text-xl tracking-widest uppercase ${colorClassName}`}>{text}</h2>;
+}
+
+/**
+ * Picks a column count and font size for the Gauntlet's reveal list from
+ * how many answers there are. A projector audience has no way to scroll
+ * the screen, so unlike a normal web page, a long list can't just scroll
+ * past the fold - it has to shrink and spread into more columns to
+ * actually stay visible instead.
+ */
+function listAnswerLayout(count: number): { columns: string; text: string } {
+  if (count <= 8) return { columns: "grid-cols-1", text: "text-3xl" };
+  if (count <= 16) return { columns: "grid-cols-2", text: "text-2xl" };
+  return { columns: "grid-cols-3", text: "text-xl" };
+}
+
+/**
  * Renders a single presenter slide. Shared by the Display route (full
  * screen, this is the whole page) and the Controller route (current +
  * next slide preview), so the two always render slides identically.
@@ -30,6 +61,7 @@ export function SlideView({ slide }: { slide: Slide | undefined }) {
     case "question":
       return (
         <div className="flex flex-col items-center gap-8">
+          <Eyebrow text="Question" />
           <p className="max-w-4xl text-center text-4xl text-neutral-100">{slide.text}</p>
           {imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- see file-level comment
@@ -41,7 +73,7 @@ export function SlideView({ slide }: { slide: Slide | undefined }) {
     case "long-game-clue":
       return (
         <div className="flex flex-col items-center gap-8">
-          <h2 className="text-2xl tracking-widest text-amber-400 uppercase">The Long Game</h2>
+          <Eyebrow text="The Long Game" colorClassName="text-amber-400" />
           <p className="max-w-4xl text-center text-4xl text-neutral-100">{slide.clueText}</p>
           {imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- see file-level comment
@@ -51,33 +83,37 @@ export function SlideView({ slide }: { slide: Slide | undefined }) {
       );
 
     case "answer":
-      return <p className="max-w-4xl text-center text-5xl text-neutral-100">{slide.answerText}</p>;
+      return (
+        <div className="flex flex-col items-center gap-6">
+          <Eyebrow text="Answer" />
+          <p className="max-w-4xl text-center text-5xl text-neutral-100">{slide.answerText}</p>
+        </div>
+      );
 
     case "long-game-answer":
       return (
-        <div className="flex flex-col items-center gap-8">
-          <h2 className="text-2xl tracking-widest text-amber-400 uppercase">
-            The Long Game — Answer
-          </h2>
+        <div className="flex flex-col items-center gap-6">
+          <Eyebrow text="The Long Game — Answer" colorClassName="text-amber-400" />
           <p className="max-w-4xl text-center text-5xl text-neutral-100">{slide.answerText}</p>
         </div>
       );
 
     case "list-prompt":
       return (
-        <div className="flex flex-col items-center gap-8">
-          <h2 className="text-2xl tracking-widest text-sky-400 uppercase">The Gauntlet</h2>
+        <div className="flex flex-col items-center gap-6">
+          <Eyebrow text="The Gauntlet" colorClassName="text-sky-400" />
           <p className="max-w-4xl text-center text-4xl text-neutral-100">{slide.prompt}</p>
         </div>
       );
 
-    case "list-answer":
+    case "list-answer": {
+      const layout = listAnswerLayout(slide.answerReference.length);
       return (
         <div className="flex flex-col items-center gap-6">
-          <h2 className="text-2xl tracking-widest text-sky-400 uppercase">
-            The Gauntlet — Answers
-          </h2>
-          <ol className="grid max-h-[70vh] max-w-4xl grid-cols-2 gap-x-8 gap-y-2 overflow-y-auto text-2xl text-neutral-100">
+          <Eyebrow text="The Gauntlet — Answers" colorClassName="text-sky-400" />
+          <ol
+            className={`grid ${layout.columns} max-w-6xl gap-x-10 gap-y-2 ${layout.text} text-neutral-100`}
+          >
             {slide.answerReference.map((answer, index) => (
               <li key={index} className="text-left">
                 <span className="text-sky-400">{index + 1}.</span> {answer}
@@ -86,5 +122,6 @@ export function SlideView({ slide }: { slide: Slide | undefined }) {
           </ol>
         </div>
       );
+    }
   }
 }
