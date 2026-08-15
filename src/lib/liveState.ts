@@ -109,18 +109,22 @@ export async function startTiebreak(
 }
 
 /** Records one team's guess in app-computes mode. Takes the current tiebreak state to merge, same pattern as setQuestionMark. */
-export async function setTiebreakGuess(
+/**
+ * Replaces the whole guesses map in one write.
+ *
+ * Whole-map rather than one team at a time on purpose: the Controller
+ * holds the guesses as local state while the host types and pushes them
+ * down from there, so two teams' saves overlapping can't have the second
+ * clobber the first by spreading a stale copy of the map.
+ */
+export async function setTiebreakGuesses(
   quizId: string,
   hostUid: string,
   currentTiebreak: TiebreakState,
-  teamId: string,
-  guess: number
+  guesses: Record<string, number>
 ): Promise<void> {
   await updateDoc(liveStateRef(quizId), {
-    tiebreak: {
-      ...currentTiebreak,
-      guesses: { ...currentTiebreak.guesses, [teamId]: guess },
-    },
+    tiebreak: { ...currentTiebreak, guesses },
     updatedAt: serverTimestamp(),
     updatedBy: hostUid,
   });

@@ -26,7 +26,7 @@ import {
   revealTiebreak,
   setLeaderboardRevealStage,
   setLiveMode,
-  setTiebreakGuess,
+  setTiebreakGuesses,
   startQuiz,
   startTiebreak,
 } from "@/lib/liveState";
@@ -230,20 +230,71 @@ function TiebreakPanel({
   const contestedTeams = tiebreak.contestedTeamIds
     .map((teamId) => teams.find((team) => team.id === teamId))
     .filter((team): team is Team => Boolean(team));
-  const computedWinnerId =
-    tiebreak.mode === "app-computes" && tiebreak.revealed
-      ? computeTiebreakWinner(tiebreak.correctAnswer, tiebreak.guesses)
-      : null;
-
   // In manual mode the host judges from paper, so the app has no way to
   // work out who won - they tell it by clicking the winning team here.
   const [manualWinnerId, setManualWinnerId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  /*
+   * The guesses as typed, which everything below is computed from.
+   *
+   * These deliberately aren't read back out of Firestore. Saving on blur
+   * alone meant a number still sitting in a focused input hadn't been
+   * written yet, so the distances, the LEVEL badges, the dead-heat
+   * verdict and the final ranking were all working from the *previous*
+   * value until the host happened to click away. Clicking a button
+   * doesn't rescue it either - the blur does fire first, but its write
+   * and the snapshot coming back don't land before the click handler
+   * reads the guesses, so it would still rank on stale numbers.
+   *
+   * Firestore is written behind this state rather than being the source
+   * for it, debounced so the projector isn't updated on every keystroke.
+   */
+  const [draftGuesses, setDraftGuesses] = useState<Record<string, number>>(tiebreak.guesses);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, []);
+
+  function updateGuess(teamId: string, raw: string) {
+    const next = { ...draftGuesses };
+    const value = Number(raw);
+    if (raw.trim() === "" || Number.isNaN(value)) {
+      // Cleared, so the team counts as not having answered again -
+      // otherwise a half-deleted number would still look like a guess.
+      delete next[teamId];
+    } else {
+      next[teamId] = value;
+    }
+    setDraftGuesses(next);
+
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      setTiebreakGuesses(quizId, hostUid, tiebreak, next);
+    }, 400);
+  }
+
+  /** Pushes anything still waiting on the debounce before acting on it. */
+  async function flushGuesses() {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    await setTiebreakGuesses(quizId, hostUid, tiebreak, draftGuesses);
+  }
+
+  const computedWinnerId =
+    tiebreak.mode === "app-computes" && tiebreak.revealed
+      ? computeTiebreakWinner(tiebreak.correctAnswer, draftGuesses)
+      : null;
+
   // Ranking - and spotting teams it failed to separate - only means
   // anything once every contested team has a guess recorded.
   const allGuessesIn = tiebreak.contestedTeamIds.every(
-    (teamId) => tiebreak.guesses[teamId] !== undefined
+    (teamId) => draftGuesses[teamId] !== undefined
   );
   const spentQuestionIds = tiebreak.usedQuestionIds ?? [];
   const followUpsAvailable = (tiebreakQuestions ?? []).filter(
@@ -254,8 +305,8 @@ function TiebreakPanel({
     tiebreak.mode === "app-computes" && tiebreak.revealed && allGuessesIn
       ? detectDeadHeats(
           tiebreak.correctAnswer,
-          tiebreak.guesses,
-          rankTeamsByGuess(tiebreak.correctAnswer, tiebreak.guesses, tiebreak.contestedTeamIds)
+          draftGuesses,
+          rankTeamsByGuess(tiebreak.correctAnswer, draftGuesses, tiebreak.contestedTeamIds)
         )
       : [];
   // Nobody in a dead heat has won anything yet, so none of them get the
@@ -288,9 +339,12 @@ function TiebreakPanel({
     if (!canProceed) return;
     setIsSaving(true);
     try {
+      // Push anything still waiting on the debounce, so the recorded
+      // tiebreak matches what was on screen when it was decided.
+      await flushGuesses();
       const ranked =
         tiebreak.mode === "app-computes"
-          ? rankTeamsByGuess(tiebreak.correctAnswer, tiebreak.guesses, tiebreak.contestedTeamIds)
+          ? rankTeamsByGuess(tiebreak.correctAnswer, draftGuesses, tiebreak.contestedTeamIds)
           : [
               manualWinnerId as string,
               ...tiebreak.contestedTeamIds.filter((id) => id !== manualWinnerId),
@@ -305,7 +359,7 @@ function TiebreakPanel({
       // A host judging manually has, by definition, separated them.
       const stillLevel =
         tiebreak.mode === "app-computes"
-          ? detectDeadHeats(tiebreak.correctAnswer, tiebreak.guesses, ranked)
+          ? detectDeadHeats(tiebreak.correctAnswer, draftGuesses, ranked)
           : [];
       const queue = [...stillLevel, ...(tiebreak.pendingDeadHeats ?? [])];
 
@@ -406,7 +460,7 @@ function TiebreakPanel({
           {contestedTeams.map((team) => {
             const isLevel = levelTeamIds.has(team.id);
             const isWinner = winnerId === team.id && !isLevel;
-            const guess = tiebreak.guesses[team.id];
+            const guess = draftGuesses[team.id];
             const distance =
               tiebreak.revealed && guess !== undefined
                 ? Math.abs(guess - tiebreak.correctAnswer)
@@ -437,13 +491,8 @@ function TiebreakPanel({
                 </span>
                 <input
                   type="number"
-                  defaultValue={tiebreak.guesses[team.id] ?? ""}
-                  onBlur={(event) => {
-                    const value = Number(event.target.value);
-                    if (!Number.isNaN(value)) {
-                      setTiebreakGuess(quizId, hostUid, tiebreak, team.id, value);
-                    }
-                  }}
+                  value={draftGuesses[team.id] ?? ""}
+                  onChange={(event) => updateGuess(team.id, event.target.value)}
                   className={cn(fieldStylesCompact, "w-32 tabular-nums")}
                   placeholder="Guess"
                 />
@@ -654,6 +703,11 @@ function ControllerContent({ code }: { code: string }) {
     }
     return (
       <TiebreakPanel
+        // Remount on each new decider so the panel's local state - the
+        // typed guesses and any manually picked winner - starts empty.
+        // Without this, attempt 2 would open pre-filled with attempt 1's
+        // numbers and its winner already highlighted.
+        key={`${liveState.tiebreak.attempt ?? 1}-${liveState.tiebreak.questionText}`}
         quizId={quiz.id}
         hostUid={user.uid}
         tiebreak={liveState.tiebreak}
