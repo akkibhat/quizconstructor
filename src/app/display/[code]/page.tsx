@@ -48,6 +48,10 @@ function DisplayContent({ code }: { code: string }) {
     return <LeaderboardView entries={leaderboard} revealStage={liveState.leaderboardRevealStage} />;
   }
 
+  if (liveState.mode === "drinks-break") {
+    return <h1 className="text-7xl font-bold text-neutral-100">Drinks Break</h1>;
+  }
+
   return <SlideView slide={slides[liveState.slideIndex]} />;
 }
 

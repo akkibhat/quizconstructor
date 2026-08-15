@@ -1,8 +1,8 @@
 import type { Timestamp } from "firebase/firestore";
 
 // What the Display route is currently showing: the round-by-round
-// presenter flow, or the standalone leaderboard.
-export type LiveMode = "presenter" | "leaderboard";
+// presenter flow, the standalone leaderboard, or a "drinks break" card.
+export type LiveMode = "presenter" | "leaderboard" | "drinks-break";
 
 // Firestore document at quizzes/{quizId}/liveState/current - the single
 // realtime sync point shared by the Controller, Display, and Leaderboard

@@ -144,6 +144,26 @@ function ControllerContent({ code }: { code: string }) {
     );
   }
 
+  if (liveState.mode === "drinks-break") {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-10 text-center">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-lg font-medium text-neutral-100">{quiz.title}</h1>
+          <button
+            type="button"
+            onClick={() => setLiveMode(quiz.id, "presenter", user.uid)}
+            className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
+          >
+            Back to Quiz
+          </button>
+        </div>
+        <div className="flex min-h-[200px] items-center justify-center rounded border border-neutral-800 bg-black p-8">
+          <h2 className="text-3xl font-bold text-neutral-100">Drinks Break</h2>
+        </div>
+      </div>
+    );
+  }
+
   if (liveState.mode === "leaderboard") {
     if (leaderboard === undefined) {
       return <p className="p-10 text-neutral-400">Loading…</p>;
@@ -201,19 +221,22 @@ function ControllerContent({ code }: { code: string }) {
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-medium text-neutral-100">{quiz.title}</h1>
-        <button
-          type="button"
-          onClick={() =>
-            setLiveMode(
-              quiz.id,
-              liveState.mode === "presenter" ? "leaderboard" : "presenter",
-              user.uid
-            )
-          }
-          className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
-        >
-          {liveState.mode === "presenter" ? "Go to Leaderboard" : "Back to Quiz"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setLiveMode(quiz.id, "drinks-break", user.uid)}
+            className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
+          >
+            Drinks Break
+          </button>
+          <button
+            type="button"
+            onClick={() => setLiveMode(quiz.id, "leaderboard", user.uid)}
+            className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300"
+          >
+            Go to Leaderboard
+          </button>
+        </div>
       </div>
 
       <div className="mb-2 text-xs text-neutral-500">
