@@ -20,6 +20,7 @@ export async function addQuestion(quizId: string, roundId: string, existingQuest
       text: "",
       answer: "",
       points: 1,
+      options: null,
       imagePath: null,
       audioPath: null,
       audioPlayMode: null,
@@ -34,7 +35,10 @@ export async function updateQuestion(
   roundId: string,
   questionId: string,
   updates: Partial<
-    Pick<Question, "text" | "answer" | "points" | "imagePath" | "audioPath" | "audioPlayMode">
+    Pick<
+      Question,
+      "text" | "answer" | "points" | "options" | "imagePath" | "audioPath" | "audioPlayMode"
+    >
   >
 ): Promise<void> {
   await updateDoc(doc(db, "quizzes", quizId, "rounds", roundId, "questions", questionId), {

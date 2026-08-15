@@ -85,6 +85,7 @@ export async function importQuestions(
       text: question.text,
       answer: question.answer,
       points: question.points,
+      options: null,
       imagePath: null,
       audioPath: null,
       audioPlayMode: null,

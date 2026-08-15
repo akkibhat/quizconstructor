@@ -37,6 +37,16 @@ export interface Question {
   // total automatically - see lib/scoring.ts.
   points: number;
 
+  // The choices shown beneath this question, if any - what turns a plain
+  // question into a multiple-choice or Odd One Out one. Lettered A, B,
+  // C... on the slide.
+  //
+  // There's no separate "which option is correct" field: `answer` above
+  // already holds the correct answer's text, so the existing answer slide
+  // and all of the scoring keep working untouched. null or empty renders
+  // as an ordinary question.
+  options: string[] | null;
+
   imagePath: string | null;
   audioPath: string | null;
   audioPlayMode: AudioPlayMode;

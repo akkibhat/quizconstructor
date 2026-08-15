@@ -31,6 +31,7 @@ import {
 } from "@/lib/questionsImportExport";
 import { updateRound } from "@/lib/rounds";
 import type { AudioPlayMode, Question } from "@/lib/types/question";
+import { ROUND_FLAVOUR_LABELS, type Round, type RoundFlavour } from "@/lib/types/round";
 
 function QuestionEditor({
   question,
@@ -156,6 +157,57 @@ function QuestionEditor({
         </div>
       )}
 
+      {!isLongGame && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Label htmlFor={`options-${question.id}`} className="flex-1">
+              Options (one per line) — leave empty for an open question
+            </Label>
+            {/* Fills in both halves of a true/false question at once,
+                since typing "True" and then listing True and False as
+                the options by hand is the same three keystrokes every
+                time. */}
+            <Button
+              size="sm"
+              onClick={() =>
+                updateQuestion(quizId, roundId, question.id, {
+                  answer: "True",
+                  options: ["True", "False"],
+                })
+              }
+            >
+              True
+            </Button>
+            <Button
+              size="sm"
+              onClick={() =>
+                updateQuestion(quizId, roundId, question.id, {
+                  answer: "False",
+                  options: ["True", "False"],
+                })
+              }
+            >
+              False
+            </Button>
+          </div>
+          <textarea
+            id={`options-${question.id}`}
+            key={(question.options ?? []).join("\n")}
+            defaultValue={(question.options ?? []).join("\n")}
+            placeholder={"Trumpet\nTrombone\nClarinet\nTuba"}
+            onBlur={(event) => {
+              const parsed = parseAnswerList(event.target.value);
+              event.target.value = parsed.join("\n");
+              updateQuestion(quizId, roundId, question.id, {
+                options: parsed.length > 0 ? parsed : null,
+              });
+            }}
+            className={cn(fieldStyles, "text-sm")}
+            rows={3}
+          />
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-3 border-t border-edge pt-3 text-sm">
         <label className="flex items-center gap-2 text-ink-muted">
           Image:
@@ -274,6 +326,99 @@ function ListRoundEditor({
         />
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * The round-wide settings that shape how its questions are presented:
+ * what to call them on screen, a rule covering every answer, and a fixed
+ * set of values the answers are drawn from.
+ *
+ * All three are optional and default to off, so a round left alone
+ * behaves exactly as rounds always have.
+ */
+function RoundPresentationSection({
+  quizId,
+  roundId,
+  round,
+}: {
+  quizId: string;
+  roundId: string;
+  round: Round;
+}) {
+  const [poolCount, setPoolCount] = useState(round.answerPool?.length ?? 0);
+
+  return (
+    <Panel className="mb-6 space-y-4">
+      <h3 className="font-display text-sm font-semibold tracking-widest text-ink uppercase">
+        Round style
+      </h3>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="flavour">Question label</Label>
+        <select
+          id="flavour"
+          value={round.flavour ?? "standard"}
+          onChange={(event) =>
+            updateRound(quizId, roundId, { flavour: event.target.value as RoundFlavour })
+          }
+          className={fieldStyles}
+        >
+          {(Object.keys(ROUND_FLAVOUR_LABELS) as RoundFlavour[]).map((flavour) => (
+            <option key={flavour} value={flavour}>
+              {ROUND_FLAVOUR_LABELS[flavour]}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-ink-muted">
+          Shown above each question on the projector. Cosmetic only - it doesn&apos;t change
+          scoring or the slide order.
+        </p>
+      </div>
+
+      <div className="space-y-1.5 border-t border-edge pt-4">
+        <Label htmlFor="themeNote">Theme note</Label>
+        <input
+          id="themeNote"
+          defaultValue={round.themeNote ?? ""}
+          placeholder="e.g. Every answer begins with S"
+          onBlur={(event) =>
+            updateRound(quizId, roundId, { themeNote: event.target.value.trim() || null })
+          }
+          className={fieldStyles}
+        />
+        <p className="text-xs text-ink-muted">
+          A rule covering the whole round, shown once on its title slide.
+        </p>
+      </div>
+
+      <div className="space-y-1.5 border-t border-edge pt-4">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="answerPool">Answer pool</Label>
+          <span className="font-mono text-xs text-flame tabular-nums">
+            {poolCount} value{poolCount === 1 ? "" : "s"}
+          </span>
+        </div>
+        <textarea
+          id="answerPool"
+          defaultValue={(round.answerPool ?? []).join("\n")}
+          placeholder={"One per line, e.g.\n17\n42\n156\n1904"}
+          onChange={(event) => setPoolCount(parseAnswerList(event.target.value).length)}
+          onBlur={(event) => {
+            const parsed = parseAnswerList(event.target.value);
+            event.target.value = parsed.join("\n");
+            setPoolCount(parsed.length);
+            updateRound(quizId, roundId, { answerPool: parsed.length > 0 ? parsed : null });
+          }}
+          className={cn(fieldStyles, "font-mono text-sm")}
+          rows={6}
+        />
+        <p className="text-xs text-ink-muted">
+          A fixed set of answers, each used exactly once. Unlike the theme note these stay on
+          screen under <em>every</em> question, so teams can weigh up what&apos;s still left.
+        </p>
+      </div>
+    </Panel>
   );
 }
 
@@ -657,6 +802,7 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
 
       {!isLongGame && (
         <>
+          <RoundPresentationSection quizId={quizId} roundId={roundId} round={round} />
           <BankSection
             quizId={quizId}
             quizTitle={quiz.title}

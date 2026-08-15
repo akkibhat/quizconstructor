@@ -150,6 +150,7 @@ export async function createQuiz(
           text: "",
           answer: "",
           points: 1,
+          options: null,
           imagePath: null,
           audioPath: null,
           audioPlayMode: null,
@@ -273,6 +274,9 @@ export async function duplicateQuiz(
         roundType: round.roundType ?? "standard",
         listPrompt: round.listPrompt ?? null,
         listAnswerReference: round.listAnswerReference ?? null,
+        flavour: round.flavour ?? "standard",
+        themeNote: round.themeNote ?? null,
+        answerPool: round.answerPool ?? null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -287,6 +291,7 @@ export async function duplicateQuiz(
           answer: question.answer,
           // Defensively defaulted - added after some test data existed.
           points: question.points ?? 1,
+          options: question.options ?? null,
           imagePath: question.imagePath,
           audioPath: question.audioPath,
           audioPlayMode: question.audioPlayMode,

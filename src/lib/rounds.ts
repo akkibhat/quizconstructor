@@ -23,6 +23,9 @@ export async function addRound(quizId: string, existingRounds: Round[]): Promise
     roundType: "standard",
     listPrompt: null,
     listAnswerReference: null,
+    flavour: "standard",
+    themeNote: null,
+    answerPool: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -59,6 +62,9 @@ export async function addListRound(quizId: string, existingRounds: Round[]): Pro
     roundType: "list",
     listPrompt: null,
     listAnswerReference: null,
+    flavour: "standard",
+    themeNote: null,
+    answerPool: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -72,7 +78,12 @@ export async function addListRound(quizId: string, existingRounds: Round[]): Pro
 export async function updateRound(
   quizId: string,
   roundId: string,
-  updates: Partial<Pick<Round, "title" | "listPrompt" | "listAnswerReference">>
+  updates: Partial<
+    Pick<
+      Round,
+      "title" | "listPrompt" | "listAnswerReference" | "flavour" | "themeNote" | "answerPool"
+    >
+  >
 ): Promise<void> {
   await updateDoc(doc(db, "quizzes", quizId, "rounds", roundId), {
     ...updates,

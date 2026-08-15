@@ -37,6 +37,57 @@ function SlideFrame({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col items-center gap-8 text-center">{children}</div>;
 }
 
+/**
+ * Multiple-choice / Odd One Out choices, lettered A, B, C... Laid out in
+ * two columns once there are more than three, so four options don't
+ * become a tall thin stack that pushes the question off the top.
+ */
+function Options({ options }: { options: string[] }) {
+  return (
+    <ol
+      className={cn(
+        "grid max-w-4xl gap-x-12 gap-y-3 text-left",
+        options.length > 3 ? "grid-cols-2" : "grid-cols-1"
+      )}
+    >
+      {options.map((option, index) => (
+        <li key={index} className="flex items-baseline gap-3 text-3xl text-ink">
+          <span className="font-display font-bold text-flame">
+            {String.fromCharCode(65 + index)}
+          </span>
+          <span>{option}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * The round's fixed set of answers, shown on every question so teams can
+ * see what's still in play while they decide - see Round.answerPool.
+ * Rendered as chips rather than a list to read as a reference strip
+ * along the bottom rather than competing with the question itself.
+ */
+function AnswerPool({ values }: { values: string[] }) {
+  return (
+    <div className="max-w-5xl border-t border-edge pt-5">
+      <p className="font-display mb-3 text-sm tracking-[0.25em] text-ink-muted uppercase">
+        Each used once
+      </p>
+      <div className="flex flex-wrap justify-center gap-2.5">
+        {values.map((value, index) => (
+          <span
+            key={index}
+            className="rounded-chip border border-edge-strong px-4 py-1.5 text-2xl text-ink-soft tabular-nums"
+          >
+            {value}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** The main body text of a slide, at the two sizes slides actually use. */
 function SlideText({ children, size = "md" }: { children: React.ReactNode; size?: "md" | "lg" }) {
   return (
@@ -72,7 +123,6 @@ export function SlideView({ slide }: { slide: Slide | undefined }) {
   }
 
   switch (slide.type) {
-    case "round-title":
     case "answers-divider":
       return (
         <h1 className="font-display max-w-5xl text-center text-7xl font-bold text-balance text-ink">
@@ -80,19 +130,36 @@ export function SlideView({ slide }: { slide: Slide | undefined }) {
         </h1>
       );
 
+    case "round-title":
+      return (
+        <SlideFrame>
+          <h1 className="font-display max-w-5xl text-7xl font-bold text-balance text-ink">
+            {slide.title}
+          </h1>
+          {slide.themeNote && (
+            <p className="font-display max-w-3xl text-3xl text-balance text-flame">
+              {slide.themeNote}
+            </p>
+          )}
+          {slide.answerPool.length > 0 && <AnswerPool values={slide.answerPool} />}
+        </SlideFrame>
+      );
+
     case "question":
       return (
         <SlideFrame>
-          <Eyebrow text="Question" />
+          <Eyebrow text={slide.flavourLabel} />
           <SlideText>{slide.text}</SlideText>
           {imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- see file-level comment
             <img
               src={imageUrl}
               alt=""
-              className="max-h-[55vh] max-w-[80vw] rounded-panel border-2 border-edge-strong"
+              className="max-h-[45vh] max-w-[80vw] rounded-panel border-2 border-edge-strong"
             />
           )}
+          {slide.options.length > 0 && <Options options={slide.options} />}
+          {slide.answerPool.length > 0 && <AnswerPool values={slide.answerPool} />}
         </SlideFrame>
       );
 

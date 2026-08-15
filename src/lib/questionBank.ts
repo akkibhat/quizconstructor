@@ -105,6 +105,7 @@ export async function insertBankQuestionsIntoRound(
       text: bankQuestion.text,
       answer: bankQuestion.answer,
       points: bankQuestion.points,
+      options: null,
       imagePath: null,
       audioPath: null,
       audioPlayMode: null,

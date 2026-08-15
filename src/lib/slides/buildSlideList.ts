@@ -1,5 +1,5 @@
 import type { Question } from "@/lib/types/question";
-import type { Round } from "@/lib/types/round";
+import { ROUND_FLAVOUR_LABELS, type Round } from "@/lib/types/round";
 import type { Slide } from "@/lib/types/slide";
 
 /**
@@ -50,7 +50,19 @@ export function buildSlideList(
   const slides: Slide[] = [];
 
   realRounds.forEach((round, index) => {
-    slides.push({ type: "round-title", roundId: round.id, title: round.title });
+    // Defaulted rather than assumed present: rounds created before these
+    // fields existed won't have them, and this runs against whatever is
+    // in Firestore right now.
+    const answerPool = round.answerPool ?? [];
+    const flavourLabel = ROUND_FLAVOUR_LABELS[round.flavour ?? "standard"];
+
+    slides.push({
+      type: "round-title",
+      roundId: round.id,
+      title: round.title,
+      themeNote: round.themeNote ?? "",
+      answerPool,
+    });
 
     if (round.roundType === "list") {
       slides.push({ type: "list-prompt", roundId: round.id, prompt: round.listPrompt ?? "" });
@@ -62,6 +74,9 @@ export function buildSlideList(
           roundId: round.id,
           questionId: question.id,
           text: question.text,
+          flavourLabel,
+          options: question.options ?? [],
+          answerPool,
           imagePath: question.imagePath,
           audioPath: question.audioPath,
           audioPlayMode: question.audioPlayMode,

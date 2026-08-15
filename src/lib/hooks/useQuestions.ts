@@ -25,10 +25,18 @@ export function useQuestions(
 
     return onSnapshot(questionsQuery, (snapshot) => {
       setQuestions(
-        snapshot.docs.map((docSnapshot) => ({
-          id: docSnapshot.id,
-          ...(docSnapshot.data() as Omit<Question, "id">),
-        }))
+        snapshot.docs.map((docSnapshot) => {
+          // Same reasoning as normaliseRound in useRounds: questions
+          // written before `points` and `options` existed are missing
+          // them, and Firestore refuses any write containing undefined.
+          const question = docSnapshot.data() as Omit<Question, "id">;
+          return {
+            id: docSnapshot.id,
+            ...question,
+            points: question.points ?? 1,
+            options: question.options ?? null,
+          };
+        })
       );
     });
   }, [quizId, roundId]);
