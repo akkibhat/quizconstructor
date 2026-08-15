@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 import { use } from "react";
 
 import { RequireAuth } from "@/components/RequireAuth";
@@ -90,6 +91,51 @@ function RoundRow({
   );
 }
 
+// Host-friendly labels for the code-gated views, matching the dashboard's
+// quick links - internal route names ("Control", "Display") don't mean
+// much to someone skimming a list of buttons.
+function liveLinksFor(code: string) {
+  return [
+    { label: "Team Setup", href: `/team-setup/${code}` },
+    { label: "Run Quiz", href: `/control/${code}` },
+    { label: "Projector", href: `/display/${code}` },
+    { label: "Scoring", href: `/scoring/${code}` },
+    { label: "Leaderboard", href: `/leaderboard/${code}` },
+  ];
+}
+
+function LiveLinksSection({ code }: { code: string }) {
+  // Safe to read window directly here (no useState/useEffect dance to
+  // avoid a server/client mismatch) - this component only ever renders
+  // once RequireAuth has finished its client-side auth check, which never
+  // completes during server rendering, so there's no SSR pass of this
+  // component to mismatch against.
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  return (
+    <div className="mb-8">
+      <h2 className="mb-3 text-lg font-medium text-neutral-100">Live Links</h2>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {liveLinksFor(code).map((link) => (
+          <div
+            key={link.href}
+            className="flex flex-col items-center gap-2 rounded border border-neutral-800 bg-neutral-900 p-3"
+          >
+            {origin && (
+              <div className="rounded bg-white p-1.5">
+                <QRCodeSVG value={`${origin}${link.href}`} size={80} />
+              </div>
+            )}
+            <Link href={link.href} className="text-sm text-neutral-200 hover:underline">
+              {link.label}
+            </Link>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function QuizEditor({ quizId }: { quizId: string }) {
   const quiz = useQuiz(quizId);
   const rounds = useRounds(quizId);
@@ -127,6 +173,8 @@ function QuizEditor({ quizId }: { quizId: string }) {
             quiz.doublePointsPicksPerTeam === 1 ? "" : "s"
           } per team)`}
       </p>
+
+      <LiveLinksSection code={quiz.code} />
 
       {quiz.longGameEnabled && longGameRound && (
         <Link

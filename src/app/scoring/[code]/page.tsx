@@ -39,6 +39,11 @@ function QuestionMarkRow({
   isDoubled: boolean;
 }) {
   const awarded = currentMarks[question.id];
+  // Defensively defaulted - `points` was added to Question after some
+  // test data existed, and Firestore rejects `undefined` field values
+  // outright (this bit once already: clicking "Full" on a legacy
+  // no-points question tried to write `undefined` into the marks map).
+  const maxPoints = question.points ?? 1;
 
   function mark(points: number) {
     setQuestionMark(quizId, roundId, teamId, question.id, points, currentMarks, isDoubled);
@@ -62,12 +67,12 @@ function QuestionMarkRow({
         >
           0
         </button>
-        {question.points > 1 && (
+        {maxPoints > 1 && (
           <button
             type="button"
-            onClick={() => mark(question.points / 2)}
+            onClick={() => mark(maxPoints / 2)}
             className={`rounded border px-2 py-1 text-xs ${
-              awarded === question.points / 2
+              awarded === maxPoints / 2
                 ? "border-amber-700 bg-amber-950 text-amber-300"
                 : "border-neutral-700 text-neutral-400"
             }`}
@@ -77,20 +82,20 @@ function QuestionMarkRow({
         )}
         <button
           type="button"
-          onClick={() => mark(question.points)}
+          onClick={() => mark(maxPoints)}
           className={`rounded border px-2 py-1 text-xs ${
-            awarded === question.points
+            awarded === maxPoints
               ? "border-emerald-700 bg-emerald-950 text-emerald-300"
               : "border-neutral-700 text-neutral-400"
           }`}
         >
-          Full ({question.points})
+          Full ({maxPoints})
         </button>
         <input
           type="number"
           step={0.5}
           placeholder="…"
-          value={awarded !== undefined && ![0, question.points / 2, question.points].includes(awarded) ? awarded : ""}
+          value={awarded !== undefined && ![0, maxPoints / 2, maxPoints].includes(awarded) ? awarded : ""}
           onChange={(event) => {
             const value = Number(event.target.value);
             if (!Number.isNaN(value)) mark(value);

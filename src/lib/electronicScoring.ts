@@ -24,7 +24,12 @@ export async function setQuestionMark(
   currentMarks: Record<string, number>,
   isDoubled: boolean
 ): Promise<void> {
-  const newMarks = { ...currentMarks, [questionId]: pointsAwarded };
+  // Firestore rejects `undefined` field values outright, so guard against
+  // a caller accidentally passing one through (e.g. from a legacy
+  // question missing its `points` field) rather than letting the whole
+  // batch fail.
+  const safePoints = Number.isFinite(pointsAwarded) ? pointsAwarded : 0;
+  const newMarks = { ...currentMarks, [questionId]: safePoints };
   const raw = Object.values(newMarks).reduce((sum, points) => sum + points, 0);
 
   const batch = writeBatch(db);
