@@ -30,7 +30,8 @@ import {
   startQuiz,
   startTiebreak,
 } from "@/lib/liveState";
-import { computeTiebreakWinner, detectTiedPositions, type TieGroup } from "@/lib/tieDetection";
+import { computeTiebreakWinner, unresolvedTieGroups, type TieGroup } from "@/lib/tieDetection";
+import { applyTiebreakResult, rankTeamsByGuess } from "@/lib/tiebreakResults";
 import type { AudioPlayMode } from "@/lib/types/question";
 import type { TiebreakMode, TiebreakState } from "@/lib/types/liveState";
 import type { TiebreakQuestion } from "@/lib/types/tiebreakQuestion";
@@ -213,10 +214,44 @@ function TiebreakPanel({
   const contestedTeams = tiebreak.contestedTeamIds
     .map((teamId) => teams.find((team) => team.id === teamId))
     .filter((team): team is Team => Boolean(team));
-  const winnerId =
+  const computedWinnerId =
     tiebreak.mode === "app-computes" && tiebreak.revealed
       ? computeTiebreakWinner(tiebreak.correctAnswer, tiebreak.guesses)
       : null;
+
+  // In manual mode the host judges from paper, so the app has no way to
+  // work out who won - they tell it by clicking the winning team here.
+  const [manualWinnerId, setManualWinnerId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const winnerId = tiebreak.mode === "app-computes" ? computedWinnerId : manualWinnerId;
+
+  /**
+   * Records the placing, then returns to the leaderboard. Until this runs
+   * the tie stays flagged as outstanding - leaving via "Back to
+   * Leaderboard" deliberately records nothing, so an abandoned tiebreak
+   * doesn't silently award a prize.
+   *
+   * Ranking everyone rather than just the winner matters for a tie across
+   * the podium, where 2nd and 3rd are real placings too. For a tie at the
+   * bottom only the winner is meaningful (they take the prize; the board
+   * isn't reordered), but ranking the rest anyway is what marks the whole
+   * group as settled so the "Tiebreak pending" badges clear.
+   */
+  async function confirmResult() {
+    if (!winnerId) return;
+    setIsSaving(true);
+    try {
+      const ordered =
+        tiebreak.mode === "app-computes"
+          ? rankTeamsByGuess(tiebreak.correctAnswer, tiebreak.guesses, tiebreak.contestedTeamIds)
+          : [winnerId, ...tiebreak.contestedTeamIds.filter((id) => id !== winnerId)];
+      await applyTiebreakResult(quizId, tiebreak.contestedPosition, ordered);
+      await endTiebreak(quizId, hostUid);
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <AppShell
@@ -284,20 +319,57 @@ function TiebreakPanel({
         </div>
       ) : (
         <div>
-          <ul className="mb-4 space-y-1 text-sm text-ink-muted">
-            {contestedTeams.map((team) => (
-              <li key={team.id}>{team.name}</li>
-            ))}
-          </ul>
+          {tiebreak.revealed && (
+            <p className="mb-3 text-sm text-ink-muted">Tap whoever came closest:</p>
+          )}
+          <div className="space-y-2">
+            {contestedTeams.map((team) => {
+              const isWinner = winnerId === team.id;
+              return (
+                <button
+                  key={team.id}
+                  type="button"
+                  disabled={!tiebreak.revealed}
+                  onClick={() => setManualWinnerId(team.id)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-panel border p-3 text-left transition-colors",
+                    isWinner
+                      ? "border-flame bg-flame/15"
+                      : "border-edge bg-surface enabled:hover:border-flame/60",
+                    !tiebreak.revealed && "cursor-default opacity-70"
+                  )}
+                >
+                  <span className="text-ink">{team.name}</span>
+                  {isWinner && <Badge tone="flame">Winner</Badge>}
+                </button>
+              );
+            })}
+          </div>
           {!tiebreak.revealed && (
             <Button
               variant="primary"
               size="lg"
+              className="mt-4"
               onClick={() => revealTiebreak(quizId, hostUid, tiebreak)}
             >
               Reveal Answer
             </Button>
           )}
+        </div>
+      )}
+
+      {tiebreak.revealed && (
+        <div className="mt-6 border-t border-edge pt-5">
+          <Button variant="primary" size="lg" disabled={!winnerId || isSaving} onClick={confirmResult}>
+            {isSaving ? "Saving…" : "Confirm result & finish"}
+          </Button>
+          <p className="mt-2 text-xs text-ink-muted">
+            {winnerId
+              ? "Records the placing and returns to the leaderboard, where the prize badge will appear."
+              : tiebreak.mode === "manual"
+                ? "Pick the winning team above first."
+                : "Enter each team's guess above first."}
+          </p>
         </div>
       )}
     </AppShell>
@@ -435,7 +507,7 @@ function ControllerContent({ code }: { code: string }) {
           <TieAlertBanner
             quizId={quiz.id}
             hostUid={user.uid}
-            tieGroups={detectTiedPositions(leaderboard)}
+            tieGroups={unresolvedTieGroups(leaderboard)}
             tiebreakQuestions={tiebreakQuestions}
           />
         )}

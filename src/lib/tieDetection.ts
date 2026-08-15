@@ -52,6 +52,40 @@ export function detectTiedPositions(entries: LeaderboardEntry[]): TieGroup[] {
   return groups;
 }
 
+/**
+ * A tie group counts as settled once every team in it carries a tiebreak
+ * placing - at that point the leaderboard sort has put them in a real
+ * order and the prize badges mean something. Until then the group is
+ * still outstanding.
+ */
+export function isTieGroupResolved(group: TieGroup): boolean {
+  return group.teams.every((team) => team.tiebreak !== null);
+}
+
+/**
+ * The tie groups that still need a tiebreak run. This is what both the
+ * Controller's alert banner and the leaderboard's "Tiebreak" badges key
+ * off, so the two never disagree about whether something is outstanding.
+ */
+export function unresolvedTieGroups(entries: LeaderboardEntry[]): TieGroup[] {
+  return detectTiedPositions(entries).filter((group) => !isTieGroupResolved(group));
+}
+
+/**
+ * Every team still waiting on a tiebreak, as a lookup. The leaderboard
+ * uses this to badge those rows and to hold back the winner styling and
+ * the 2nd-to-last prize until the position is actually settled.
+ */
+export function teamsAwaitingTiebreak(entries: LeaderboardEntry[]): Set<string> {
+  const pending = new Set<string>();
+  for (const group of unresolvedTieGroups(entries)) {
+    for (const team of group.teams) {
+      pending.add(team.teamId);
+    }
+  }
+  return pending;
+}
+
 /** In app-computes mode, whichever tied team's guess is numerically closest to the correct answer wins. */
 export function computeTiebreakWinner(
   correctAnswer: number,

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/cn";
 import type { LeaderboardEntry } from "@/lib/hooks/useLeaderboardTotals";
+import { teamsAwaitingTiebreak } from "@/lib/tieDetection";
 
 /**
  * Ranked team list with a progressive reveal: stage 0 shows nothing,
@@ -30,6 +31,26 @@ export function LeaderboardView({
   // wrong to "win" it would be a trivial way to cheat.
   const secondToLastIndex = entries.length >= 2 ? entries.length - 2 : -1;
 
+  // Teams whose position is tied and hasn't been settled by a tiebreak
+  // yet. Their row order is arbitrary until then, so awarding anything
+  // off the back of it would be announcing a winner that hasn't been
+  // decided - the badges below hold back until the tiebreak has run.
+  const awaitingTiebreak = teamsAwaitingTiebreak(entries);
+
+  // When a tie for the prize has been settled, the badge follows the team
+  // that won the tiebreak rather than whoever happens to sit in the
+  // 2nd-to-last row - a bottom tiebreak deliberately doesn't reorder the
+  // board, since the badge is the whole outcome. Ignored if that team is
+  // no longer on the 2nd-to-last score, which means scoring has moved on
+  // since and the stored result is stale.
+  const prizeWinner = entries.find(
+    (entry) => entry.tiebreak?.position === "second-to-last" && entry.tiebreak.rank === 0
+  );
+  const prizeWinnerId =
+    prizeWinner && secondToLastIndex >= 0 && prizeWinner.total === entries[secondToLastIndex].total
+      ? prizeWinner.teamId
+      : null;
+
   return (
     <div className="w-full max-w-3xl">
       <h1 className="font-display mb-8 text-center text-6xl font-bold tracking-wide text-ink uppercase">
@@ -42,10 +63,19 @@ export function LeaderboardView({
         <ol className="space-y-2.5">
           {entries.map((entry, index) => {
             const isRevealed = index >= revealFromIndex;
+            const isPending = awaitingTiebreak.has(entry.teamId);
             // The winner only gets the full orange treatment once the
             // top of the board is actually revealed - lighting up row 1
-            // while it still reads "???" would give the game away.
-            const isWinner = index === 0 && isRevealed;
+            // while it still reads "???" would give the game away - and
+            // only once any tie for the lead has actually been settled.
+            const isWinner = index === 0 && isRevealed && !isPending;
+            // With no tiebreak in play the prize just goes to whoever is
+            // 2nd from the bottom; once one has been settled it follows
+            // the team that won it instead.
+            const holdsPrize = prizeWinnerId
+              ? entry.teamId === prizeWinnerId
+              : index === secondToLastIndex;
+            const showSecondToLastPrize = isRevealed && holdsPrize && !isPending;
 
             return (
               <li
@@ -76,9 +106,14 @@ export function LeaderboardView({
                   )}
                 >
                   {isRevealed ? entry.name : "???"}
-                  {isRevealed && index === secondToLastIndex && (
+                  {showSecondToLastPrize && (
                     <span className="rounded-chip border border-gold/45 px-2 py-0.5 text-xs font-semibold tracking-wide text-gold uppercase">
                       2nd-to-last prize
+                    </span>
+                  )}
+                  {isRevealed && isPending && (
+                    <span className="rounded-chip border border-flame px-2 py-0.5 text-xs font-semibold tracking-wide text-flame uppercase">
+                      Tiebreak pending
                     </span>
                   )}
                 </span>

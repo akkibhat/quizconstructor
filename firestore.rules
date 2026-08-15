@@ -100,6 +100,15 @@ service cloud.firestore {
         allow write: if isHostOfQuiz(quizId);
       }
 
+      // Resolved tiebreak placings - see lib/types/tiebreakResult.ts for
+      // why these can't live on the team document. Code-readable like
+      // every other quiz subcollection, since the Display and Leaderboard
+      // routes need them to order a resolved tie correctly.
+      match /tiebreakResults/{teamId} {
+        allow read: if true;
+        allow write: if isHostOfQuiz(quizId);
+      }
+
       match /liveState/{stateDoc} {
         allow read: if true;
         allow write: if isHostOfQuiz(quizId);
