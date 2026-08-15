@@ -24,6 +24,10 @@ export function LeaderboardView({
   const revealFromIndex = [entries.length, entries.length - thirdSize, entries.length - thirdSize * 2, 0][
     revealStage
   ];
+  // Many venues also give a (smaller) prize for 2nd-to-last, not last -
+  // last is excluded deliberately, since deliberately answering everything
+  // wrong to "win" it would be a trivial way to cheat.
+  const secondToLastIndex = entries.length >= 2 ? entries.length - 2 : -1;
 
   return (
     <div className="w-full max-w-2xl">
@@ -41,6 +45,11 @@ export function LeaderboardView({
               >
                 <span className="text-xl text-neutral-100">
                   {index + 1}. {isRevealed ? entry.name : "???"}
+                  {isRevealed && index === secondToLastIndex && (
+                    <span className="ml-2 rounded border border-purple-700 px-1.5 py-0.5 text-xs text-purple-300">
+                      2nd-to-last prize
+                    </span>
+                  )}
                 </span>
                 <span className="text-xl text-neutral-400">{isRevealed ? entry.total : "—"}</span>
               </li>
