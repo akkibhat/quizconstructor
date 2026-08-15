@@ -3,6 +3,20 @@ import type { LeaderboardEntry } from "@/lib/hooks/useLeaderboardTotals";
 import { teamsAwaitingTiebreak } from "@/lib/tieDetection";
 
 /**
+ * The podium fills for 1st, 2nd and 3rd. Filling the whole row rather
+ * than adding a badge is the point: it reads from the back of a room
+ * without anyone having to read anything, which a small chip wouldn't.
+ *
+ * All three carry the same near-black text, so the row's own colour is
+ * the only thing that changes between them.
+ */
+const MEDAL_ROWS = [
+  "border-gold bg-gold edge-dark",
+  "border-silver bg-silver edge-dark",
+  "border-bronze bg-bronze edge-dark",
+];
+
+/**
  * Ranked team list with a progressive reveal: stage 0 shows nothing,
  * stage 1 reveals the bottom third (worst-ranked teams), stage 2 reveals
  * the bottom two-thirds, stage 3 reveals everyone - stepping through in
@@ -64,11 +78,13 @@ export function LeaderboardView({
           {entries.map((entry, index) => {
             const isRevealed = index >= revealFromIndex;
             const isPending = awaitingTiebreak.has(entry.teamId);
-            // The winner only gets the full orange treatment once the
-            // top of the board is actually revealed - lighting up row 1
-            // while it still reads "???" would give the game away - and
-            // only once any tie for the lead has actually been settled.
-            const isWinner = index === 0 && isRevealed && !isPending;
+
+            // A medal only lands once the row is actually revealed -
+            // lighting up 1st while it still reads "???" would give the
+            // game away - and only once any tie for that spot has been
+            // settled, since until then the order is arbitrary.
+            const medal = isRevealed && !isPending ? MEDAL_ROWS[index] : undefined;
+
             // With no tiebreak in play the prize just goes to whoever is
             // 2nd from the bottom; once one has been settled it follows
             // the team that won it instead.
@@ -82,17 +98,13 @@ export function LeaderboardView({
                 key={entry.teamId}
                 className={cn(
                   "flex items-center gap-5 rounded-panel border px-6 py-4 transition-colors",
-                  isWinner
-                    ? "border-flame-bright bg-flame edge-dark"
-                    : isRevealed
-                      ? "border-edge bg-surface"
-                      : "border-edge/60 bg-surface/40"
+                  medal ?? (isRevealed ? "border-edge bg-surface" : "border-edge/60 bg-surface/40")
                 )}
               >
                 <span
                   className={cn(
                     "font-display w-10 shrink-0 text-3xl font-bold tabular-nums",
-                    isWinner ? "text-on-flame" : "text-ink-muted"
+                    medal ? "text-on-flame" : "text-ink-muted"
                   )}
                 >
                   {index + 1}
@@ -101,13 +113,21 @@ export function LeaderboardView({
                 <span
                   className={cn(
                     "flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-2xl",
-                    isWinner ? "font-semibold text-on-flame" : "text-ink",
+                    medal ? "font-semibold text-on-flame" : "text-ink",
                     !isRevealed && "text-ink-muted"
                   )}
                 >
                   {isRevealed ? entry.name : "???"}
                   {showSecondToLastPrize && (
-                    <span className="rounded-chip border border-gold/45 px-2 py-0.5 text-xs font-semibold tracking-wide text-gold uppercase">
+                    <span
+                      className={cn(
+                        "rounded-chip border px-2 py-0.5 text-xs font-semibold tracking-wide uppercase",
+                        // Mint rather than gold now that gold is 1st
+                        // place - two gold badges meaning unrelated
+                        // things would read as connected.
+                        medal ? "border-on-flame/40 text-on-flame" : "border-mint/50 text-mint"
+                      )}
+                    >
                       2nd-to-last prize
                     </span>
                   )}
@@ -121,7 +141,7 @@ export function LeaderboardView({
                 <span
                   className={cn(
                     "font-display shrink-0 text-3xl font-bold tabular-nums",
-                    isWinner ? "text-on-flame" : isRevealed ? "text-ink" : "text-ink-muted"
+                    medal ? "text-on-flame" : isRevealed ? "text-ink" : "text-ink-muted"
                   )}
                 >
                   {isRevealed ? entry.total : "—"}

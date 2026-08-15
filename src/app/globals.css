@@ -48,8 +48,19 @@
      The two special round types each keep their own colour so they stay
      instantly recognisable on the projector. Deliberately distinct from
      flame, which is reserved for "this is the primary action". */
-  --color-gold: #ebb84d; /* The Long Game */
-  --color-mint: #52c7b8; /* The Gauntlet */
+  --color-gold: #ebb84d; /* The Long Game, and 1st place */
+  --color-mint: #52c7b8; /* The Gauntlet, and the 2nd-to-last prize */
+
+  /* --- Podium --------------------------------------------------------
+     Gold above doubles as 1st. Both of these are light enough to carry
+     the same near-black text as an orange fill.
+
+     Bronze is deliberately lighter and less saturated than a traditional
+     bronze (0.60 against flame's 0.75). Saturation is what separates it
+     from flame by eye - a truer bronze sat right next to gold on the row
+     above, and read as another orange next to a primary button. */
+  --color-silver: #cbd2d6;
+  --color-bronze: #b87a4a;
 
   /* --- Status -------------------------------------------------------- */
   --color-danger: #e5563f;
