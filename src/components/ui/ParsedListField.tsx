@@ -25,6 +25,7 @@ export function ParsedListField({
   placeholder,
   rows,
   onSave,
+  renderHint,
 }: {
   id: string;
   label: string;
@@ -34,6 +35,9 @@ export function ParsedListField({
   placeholder: string;
   rows: number;
   onSave: (parsed: string[]) => void;
+  // For callers that want to react to the live count too - a minimum-
+  // options warning, say - without duplicating the parse themselves.
+  renderHint?: (count: number) => React.ReactNode;
 }) {
   const [text, setText] = useState((defaultValue ?? []).join("\n"));
   const count = useMemo(() => parseAnswerList(text).length, [text]);
@@ -60,6 +64,7 @@ export function ParsedListField({
         className={cn(fieldStyles, "font-mono text-sm")}
         rows={rows}
       />
+      {renderHint?.(count)}
     </div>
   );
 }

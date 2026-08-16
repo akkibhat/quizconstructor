@@ -141,6 +141,7 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
               quizId={quizId}
               roundId={roundId}
               isLongGame={isLongGame}
+              flavour={round.flavour}
               confirmDialog={confirmDialog}
             />
           ))}

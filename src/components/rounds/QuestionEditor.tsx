@@ -4,13 +4,78 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ChipToggle } from "@/components/ui/ChipToggle";
 import { fieldStyles, fieldStylesCompact, fileInputStyles, Label } from "@/components/ui/Field";
 import { Panel } from "@/components/ui/Panel";
+import { ParsedListField } from "@/components/ui/ParsedListField";
 import { cn } from "@/lib/cn";
 import { uploadQuestionAudio, uploadQuestionImage } from "@/lib/media";
 import { deleteQuestion, swapQuestionOrder, updateQuestion } from "@/lib/questions";
-import { parseAnswerList } from "@/lib/questionsImportExport";
+import { ROUND_FLAVOUR_INFO } from "@/lib/roundFlavourLabels";
 import type { AudioPlayMode, Question } from "@/lib/types/question";
+import type { RoundFlavour } from "@/lib/types/round";
+
+/**
+ * The True/False answer picker - two chips instead of a free options
+ * list, since the whole point of this flavour is that there's nothing to
+ * type. Selecting one sets both `answer` and `options` together, which is
+ * what makes the slide's lettered options and the scoring agree.
+ */
+function TrueFalseAnswer({
+  answer,
+  onPick,
+}: {
+  answer: string;
+  onPick: (value: "True" | "False") => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Label className="shrink-0">Answer</Label>
+      <ChipToggle selected={answer === "True"} onClick={() => onPick("True")}>
+        True
+      </ChipToggle>
+      <ChipToggle selected={answer === "False"} onClick={() => onPick("False")}>
+        False
+      </ChipToggle>
+    </div>
+  );
+}
+
+/**
+ * The Multiple Choice / Odd One Out options list, with a warning while
+ * there aren't enough options yet for the flavour to make sense - a
+ * two-item "Odd One Out" has nothing to be odd among.
+ */
+function OptionsList({
+  questionId,
+  options,
+  minOptions,
+  onSave,
+}: {
+  questionId: string;
+  options: string[] | null;
+  minOptions: number;
+  onSave: (parsed: string[]) => void;
+}) {
+  return (
+    <ParsedListField
+      id={`options-${questionId}`}
+      label="Options"
+      unitLabel="option"
+      defaultValue={options}
+      placeholder={"Trumpet\nTrombone\nClarinet\nTuba"}
+      rows={4}
+      onSave={onSave}
+      renderHint={(count) =>
+        count > 0 && count < minOptions ? (
+          <p className="text-xs text-flame">
+            {count} option{count === 1 ? "" : "s"} set — add at least {minOptions - count} more.
+          </p>
+        ) : null
+      }
+    />
+  );
+}
 
 export function QuestionEditor({
   question,
@@ -19,6 +84,7 @@ export function QuestionEditor({
   quizId,
   roundId,
   isLongGame,
+  flavour,
   confirmDialog,
 }: {
   question: Question;
@@ -27,9 +93,13 @@ export function QuestionEditor({
   quizId: string;
   roundId: string;
   isLongGame: boolean;
+  // Only meaningful when !isLongGame - Long Game clues don't go through
+  // the flavour system, they always get the plain text+image fields.
+  flavour: RoundFlavour;
   confirmDialog: (message: string) => Promise<boolean>;
 }) {
   const [uploading, setUploading] = useState(false);
+  const info = ROUND_FLAVOUR_INFO[flavour];
 
   async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -60,6 +130,9 @@ export function QuestionEditor({
       setUploading(false);
     }
   }
+
+  const showImage = isLongGame || info.fields.image;
+  const showAudio = !isLongGame && info.fields.audio;
 
   return (
     <Panel as="li" className="space-y-3">
@@ -106,7 +179,19 @@ export function QuestionEditor({
         rows={2}
       />
 
-      {!isLongGame && (
+      {!isLongGame && info.fields.options === "true-false" && (
+        <TrueFalseAnswer
+          answer={question.answer}
+          onPick={(value) =>
+            updateQuestion(quizId, roundId, question.id, {
+              answer: value,
+              options: ["True", "False"],
+            })
+          }
+        />
+      )}
+
+      {!isLongGame && info.fields.options !== "true-false" && (
         <div className="flex gap-2">
           <textarea
             defaultValue={question.answer}
@@ -136,72 +221,36 @@ export function QuestionEditor({
         </div>
       )}
 
-      {!isLongGame && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Label htmlFor={`options-${question.id}`} className="flex-1">
-              Options (one per line) — leave empty for an open question
-            </Label>
-            {/* Fills in both halves of a true/false question at once,
-                since typing "True" and then listing True and False as
-                the options by hand is the same three keystrokes every
-                time. */}
-            <Button
-              size="sm"
-              onClick={() =>
-                updateQuestion(quizId, roundId, question.id, {
-                  answer: "True",
-                  options: ["True", "False"],
-                })
-              }
-            >
-              True
-            </Button>
-            <Button
-              size="sm"
-              onClick={() =>
-                updateQuestion(quizId, roundId, question.id, {
-                  answer: "False",
-                  options: ["True", "False"],
-                })
-              }
-            >
-              False
-            </Button>
-          </div>
-          <textarea
-            id={`options-${question.id}`}
-            key={(question.options ?? []).join("\n")}
-            defaultValue={(question.options ?? []).join("\n")}
-            placeholder={"Trumpet\nTrombone\nClarinet\nTuba"}
-            onBlur={(event) => {
-              const parsed = parseAnswerList(event.target.value);
-              event.target.value = parsed.join("\n");
-              updateQuestion(quizId, roundId, question.id, {
-                options: parsed.length > 0 ? parsed : null,
-              });
-            }}
-            className={cn(fieldStyles, "text-sm")}
-            rows={3}
-          />
+      {!isLongGame && info.fields.options === "list" && (
+        <OptionsList
+          questionId={question.id}
+          options={question.options}
+          minOptions={info.fields.minOptions ?? 2}
+          onSave={(parsed) =>
+            updateQuestion(quizId, roundId, question.id, {
+              options: parsed.length > 0 ? parsed : null,
+            })
+          }
+        />
+      )}
+
+      {showImage && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-edge pt-3 text-sm">
+          <label className="flex items-center gap-2 text-ink-muted">
+            Image:
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              disabled={uploading}
+              className={fileInputStyles}
+            />
+          </label>
+          {question.imagePath && <Badge tone="mint">Attached</Badge>}
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-edge pt-3 text-sm">
-        <label className="flex items-center gap-2 text-ink-muted">
-          Image:
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            disabled={uploading}
-            className={fileInputStyles}
-          />
-        </label>
-        {question.imagePath && <Badge tone="mint">Attached</Badge>}
-      </div>
-
-      {!isLongGame && (
+      {showAudio && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <label className="flex items-center gap-2 text-ink-muted">
             Audio:
