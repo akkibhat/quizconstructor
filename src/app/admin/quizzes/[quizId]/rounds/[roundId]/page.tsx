@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 
 import { CodeGateLoading, NotFoundPanel } from "@/components/CodeGateStatus";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -10,6 +10,7 @@ import { ListRoundEditor } from "@/components/rounds/ListRoundEditor";
 import { QuestionEditor } from "@/components/rounds/QuestionEditor";
 import { RoundFlavourReference } from "@/components/rounds/RoundFlavourReference";
 import { RoundPresentationSection } from "@/components/rounds/RoundPresentationSection";
+import { RoundPreviewModal } from "@/components/rounds/RoundPreviewModal";
 import { AppShell, BackLink, SectionHeading } from "@/components/ui/AppShell";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -33,6 +34,7 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
   const round = rounds?.find((r) => r.id === roundId);
   const isLongGame = round?.isLongGame ?? false;
   const realRoundCount = realRoundsOf(rounds).length;
+  const [previewing, setPreviewing] = useState(false);
 
   if (quiz === undefined || rounds === undefined || questions === undefined) {
     return <CodeGateLoading />;
@@ -45,15 +47,7 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
   }
 
   if (round.roundType === "list") {
-    return (
-      <ListRoundEditor
-        quizId={quizId}
-        roundId={roundId}
-        title={round.title}
-        listPrompt={round.listPrompt}
-        listAnswerReference={round.listAnswerReference}
-      />
-    );
+    return <ListRoundEditor quizId={quizId} round={round} />;
   }
 
   // The Long Game must always have at most one clue per real round - see
@@ -64,7 +58,14 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
 
   return (
     <AppShell width="wide">
-      <BackLink href={`/admin/quizzes/${quizId}`}>Back to quiz</BackLink>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <BackLink href={`/admin/quizzes/${quizId}`}>Back to quiz</BackLink>
+        {!isLongGame && (
+          <Button size="sm" onClick={() => setPreviewing(true)}>
+            Preview
+          </Button>
+        )}
+      </div>
 
       {isLongGame ? (
         <>
@@ -167,6 +168,14 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
       </div>
 
       {dialog}
+
+      {previewing && (
+        <RoundPreviewModal
+          round={round}
+          questions={questions}
+          onClose={() => setPreviewing(false)}
+        />
+      )}
     </AppShell>
   );
 }
