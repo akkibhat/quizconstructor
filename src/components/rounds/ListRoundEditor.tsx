@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
-
 import { AppShell, BackLink } from "@/components/ui/AppShell";
 import { Badge } from "@/components/ui/Badge";
 import { fieldStyles, Label } from "@/components/ui/Field";
+import { ParsedListField } from "@/components/ui/ParsedListField";
 import { cn } from "@/lib/cn";
-import { parseAnswerList } from "@/lib/questionsImportExport";
 import { updateRound } from "@/lib/rounds";
 
 export function ListRoundEditor({
@@ -22,12 +20,6 @@ export function ListRoundEditor({
   listPrompt: string | null;
   listAnswerReference: string[] | null;
 }) {
-  // Tracks the parsed count live as the host types/pastes, so they can
-  // eyeball "did that paste actually give me 25 answers" before saving -
-  // the textarea itself still holds raw text; parseAnswerList only runs
-  // for real (and gets saved) on blur.
-  const [answerCount, setAnswerCount] = useState(listAnswerReference?.length ?? 0);
-
   return (
     <AppShell>
       <BackLink href={`/admin/quizzes/${quizId}`}>Back to quiz</BackLink>
@@ -58,28 +50,16 @@ export function ListRoundEditor({
         />
       </div>
 
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="listAnswerReference">Reference list</Label>
-          <span className="font-mono text-xs text-mint tabular-nums">
-            {answerCount} answer{answerCount === 1 ? "" : "s"}
-          </span>
-        </div>
-        <textarea
-          id="listAnswerReference"
-          defaultValue={listAnswerReference?.join("\n") ?? ""}
-          placeholder="Paste in the full valid-answer list, one per line - your own cheat sheet while marking, also shown to the room as the reveal afterwards. Numbering or bullets are fine, they'll be stripped automatically."
-          onChange={(event) => setAnswerCount(parseAnswerList(event.target.value).length)}
-          onBlur={(event) => {
-            const parsed = parseAnswerList(event.target.value);
-            event.target.value = parsed.join("\n");
-            setAnswerCount(parsed.length);
-            updateRound(quizId, roundId, { listAnswerReference: parsed });
-          }}
-          className={cn(fieldStyles, "font-mono text-sm")}
-          rows={16}
-        />
-      </div>
+      <ParsedListField
+        id="listAnswerReference"
+        label="Reference list"
+        unitLabel="answer"
+        unitClassName="text-mint"
+        defaultValue={listAnswerReference}
+        placeholder="Paste in the full valid-answer list, one per line - your own cheat sheet while marking, also shown to the room as the reveal afterwards. Numbering or bullets are fine, they'll be stripped automatically."
+        rows={16}
+        onSave={(parsed) => updateRound(quizId, roundId, { listAnswerReference: parsed })}
+      />
     </AppShell>
   );
 }
