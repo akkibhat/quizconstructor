@@ -4,7 +4,8 @@ import { fieldStyles, Label } from "@/components/ui/Field";
 import { Panel } from "@/components/ui/Panel";
 import { ParsedListField } from "@/components/ui/ParsedListField";
 import { updateRound } from "@/lib/rounds";
-import { type Round, ROUND_FLAVOUR_LABELS, type RoundFlavour } from "@/lib/types/round";
+import { ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
+import { type Round, type RoundFlavour } from "@/lib/types/round";
 
 export function RoundPresentationSection({
   quizId,

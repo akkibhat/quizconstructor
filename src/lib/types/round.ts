@@ -29,16 +29,6 @@ export type RoundFlavour =
   | "picture-this"
   | "close-up";
 
-/** What each flavour is called on screen, and in the round editor's dropdown. */
-export const ROUND_FLAVOUR_LABELS: Record<RoundFlavour, string> = {
-  standard: "Question",
-  "true-false": "True or False",
-  "multiple-choice": "Multiple Choice",
-  "odd-one-out": "Odd One Out",
-  "finish-the-lyric": "Finish the Lyric",
-  "picture-this": "Picture This",
-  "close-up": "Close-Up",
-};
 
 // Firestore document at quizzes/{quizId}/rounds/{roundId}.
 export interface Round {

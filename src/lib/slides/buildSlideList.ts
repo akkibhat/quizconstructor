@@ -1,5 +1,6 @@
 import type { Question } from "@/lib/types/question";
-import { ROUND_FLAVOUR_LABELS, type Round } from "@/lib/types/round";
+import { ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
+import type { Round } from "@/lib/types/round";
 import type { Slide } from "@/lib/types/slide";
 
 /**
