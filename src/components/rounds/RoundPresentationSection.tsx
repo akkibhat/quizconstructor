@@ -1,95 +1,87 @@
 "use client";
 
-import { useState } from "react";
-
+import { Badge } from "@/components/ui/Badge";
 import { fieldStyles, Label } from "@/components/ui/Field";
 import { Panel } from "@/components/ui/Panel";
-import { ParsedListField } from "@/components/ui/ParsedListField";
-import { cn } from "@/lib/cn";
+import { deriveAnswerPool, duplicateAnswers } from "@/lib/answerPool";
 import { updateRound } from "@/lib/rounds";
-import { ROUND_FLAVOUR_INFO, ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
+import { ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
+import type { Question } from "@/lib/types/question";
 import { type Round, type RoundFlavour } from "@/lib/types/round";
 
 /**
- * Every flavour, each individually expandable, so a host can browse
- * what's on offer before picking one. Whichever flavour is currently
- * selected on the dropdown opens automatically - a quick confirmation of
- * what was just picked - but the host can still click open any other one
- * to compare.
+ * A read-only preview of the round's answer pool - derived live from the
+ * questions below, not typed separately. Warns about duplicate answers,
+ * since the pool mechanic assumes every value is claimed by exactly one
+ * question.
  */
-function FlavourGuide({ selected }: { selected: RoundFlavour }) {
-  const [openFlavour, setOpenFlavour] = useState<RoundFlavour | null>(selected);
-  // Tracks the last flavour this ran for, so a dropdown change can be
-  // caught and openFlavour re-synced during render - React's documented
-  // way to adjust state from a prop change without the extra render an
-  // effect would cost. See useState-in-effect notes elsewhere in this
-  // codebase for why an effect is avoided here.
-  const [syncedFor, setSyncedFor] = useState(selected);
-  if (selected !== syncedFor) {
-    setSyncedFor(selected);
-    setOpenFlavour(selected);
-  }
+function AnswerPoolPreview({ questions }: { questions: Question[] }) {
+  const pool = deriveAnswerPool(questions);
+  const duplicates = duplicateAnswers(questions);
 
   return (
     <div className="space-y-1.5">
-      <Label>What does each style mean?</Label>
-      <div className="space-y-1.5">
-        {(Object.keys(ROUND_FLAVOUR_LABELS) as RoundFlavour[]).map((flavour) => {
-          const info = ROUND_FLAVOUR_INFO[flavour];
-          const isOpen = openFlavour === flavour;
-          return (
-            <div key={flavour} className="overflow-hidden rounded-chip border border-edge">
-              <button
-                type="button"
-                onClick={() => setOpenFlavour(isOpen ? null : flavour)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors",
-                  isOpen ? "text-flame" : "text-ink-soft hover:text-ink"
-                )}
-              >
-                <span className="font-semibold">{ROUND_FLAVOUR_LABELS[flavour]}</span>
-                <span aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
-              </button>
-              {isOpen && (
-                <dl className="space-y-2.5 border-t border-edge px-3 py-3 text-xs">
-                  <div>
-                    <dt className="font-semibold text-ink-soft">What it is</dt>
-                    <dd className="mt-0.5 text-ink-muted">{info.description}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-ink-soft">What&apos;s expected</dt>
-                    <dd className="mt-0.5 text-ink-muted">{info.expects}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-ink-soft">On the projector</dt>
-                    <dd className="mt-0.5 text-ink-muted">{info.projector}</dd>
-                  </div>
-                </dl>
-              )}
-            </div>
-          );
-        })}
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-2">
+          <Label>Answer pool</Label>
+          <Badge>Auto</Badge>
+        </span>
+        <span className="font-mono text-xs text-flame tabular-nums">
+          {pool.length} value{pool.length === 1 ? "" : "s"}
+        </span>
       </div>
+
+      {pool.length === 0 ? (
+        <p className="rounded-chip border border-dashed border-edge px-3 py-2 text-xs text-ink-muted">
+          Fill in answers below and they&apos;ll appear here automatically.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {pool.map((value, index) => (
+            <span
+              key={index}
+              className="rounded-chip border border-edge-strong px-2 py-1 text-xs text-ink-soft"
+            >
+              {value}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {duplicates.length > 0 && (
+        <p className="rounded-chip border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+          Repeated answer{duplicates.length === 1 ? "" : "s"}: {duplicates.join(", ")} - each
+          pool value should belong to exactly one question.
+        </p>
+      )}
+
+      <p className="text-xs text-ink-muted">
+        Every answered question&apos;s answer, each used once. Stays on screen under{" "}
+        <em>every</em> question so teams can weigh up what&apos;s still left - always matches the
+        questions below, since there&apos;s nothing separate to keep in sync.
+      </p>
     </div>
   );
 }
 
 /**
  * The round-wide settings that shape how its questions are presented:
- * what to call them on screen, a rule covering every answer, and a fixed
- * set of values the answers are drawn from.
+ * what to call them on screen, a rule covering every answer, and a
+ * preview of the pool of answers those questions draw from.
  *
- * All three are optional and default to off, so a round left alone
- * behaves exactly as rounds always have.
+ * All are optional and default to off, so a round left alone behaves
+ * exactly as rounds always have.
  */
 export function RoundPresentationSection({
   quizId,
   roundId,
   round,
+  questions,
 }: {
   quizId: string;
   roundId: string;
   round: Round;
+  questions: Question[];
 }) {
   return (
     <Panel className="mb-6 space-y-4">
@@ -115,12 +107,9 @@ export function RoundPresentationSection({
         </select>
         <p className="text-xs text-ink-muted">
           Sets what&apos;s shown above each question on the projector, and which fields the
-          question editor below shows - it doesn&apos;t change scoring or the slide order.
+          question editor below shows - it doesn&apos;t change scoring or the slide order. See
+          the Round types panel for what each one means.
         </p>
-      </div>
-
-      <div className="border-t border-edge pt-4">
-        <FlavourGuide selected={round.flavour} />
       </div>
 
       <div className="space-y-1.5 border-t border-edge pt-4">
@@ -140,21 +129,7 @@ export function RoundPresentationSection({
       </div>
 
       <div className="border-t border-edge pt-4">
-        <ParsedListField
-          id="answerPool"
-          label="Answer pool"
-          unitLabel="value"
-          defaultValue={round.answerPool}
-          placeholder={"One per line, e.g.\n17\n42\n156\n1904"}
-          rows={6}
-          onSave={(parsed) =>
-            updateRound(quizId, roundId, { answerPool: parsed.length > 0 ? parsed : null })
-          }
-        />
-        <p className="mt-1.5 text-xs text-ink-muted">
-          A fixed set of answers, each used exactly once. Unlike the theme note these stay on
-          screen under <em>every</em> question, so teams can weigh up what&apos;s still left.
-        </p>
+        <AnswerPoolPreview questions={questions} />
       </div>
     </Panel>
   );

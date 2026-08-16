@@ -63,10 +63,11 @@ function Options({ options }: { options: string[] }) {
 }
 
 /**
- * The round's fixed set of answers, shown on every question so teams can
- * see what's still in play while they decide - see Round.answerPool.
- * Rendered as chips rather than a list to read as a reference strip
- * along the bottom rather than competing with the question itself.
+ * The round's answer pool, shown on every question so teams can see
+ * what's still in play while they decide - see deriveAnswerPool in
+ * lib/answerPool.ts. Rendered as chips rather than a list to read as a
+ * reference strip along the bottom rather than competing with the
+ * question itself.
  */
 function AnswerPool({ values }: { values: string[] }) {
   return (

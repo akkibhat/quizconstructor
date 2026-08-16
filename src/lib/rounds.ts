@@ -61,10 +61,7 @@ export async function updateRound(
   quizId: string,
   roundId: string,
   updates: Partial<
-    Pick<
-      Round,
-      "title" | "listPrompt" | "listAnswerReference" | "flavour" | "themeNote" | "answerPool"
-    >
+    Pick<Round, "title" | "listPrompt" | "listAnswerReference" | "flavour" | "themeNote">
   >
 ): Promise<void> {
   await updateDoc(doc(db, "quizzes", quizId, "rounds", roundId), {

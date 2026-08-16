@@ -1,5 +1,6 @@
-import type { Question } from "@/lib/types/question";
+import { deriveAnswerPool } from "@/lib/answerPool";
 import { ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
+import type { Question } from "@/lib/types/question";
 import type { Round } from "@/lib/types/round";
 import type { Slide } from "@/lib/types/slide";
 
@@ -32,9 +33,11 @@ export function buildSlideList(
   const slides: Slide[] = [];
 
   realRounds.forEach((round, index) => {
-    // null on the round means "not set"; the slide types want an empty
-    // list, so the conversion happens once here.
-    const answerPool = round.answerPool ?? [];
+    // Derived from the round's own questions rather than a stored field -
+    // see deriveAnswerPool. Empty for a Gauntlet round, which has no
+    // per-question answers to derive from - that's correct, the pool
+    // concept doesn't apply there.
+    const answerPool = deriveAnswerPool(questionsByRound[round.id] ?? []);
     const flavourLabel = ROUND_FLAVOUR_LABELS[round.flavour];
 
     slides.push({

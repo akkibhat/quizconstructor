@@ -11,8 +11,9 @@ export type Slide =
       // A rule covering the whole round, e.g. "Every answer begins with
       // S" - see Round.themeNote. Empty string = nothing to show.
       themeNote: string;
-      // The round's fixed set of answers, if it has one - shown here as
-      // well as under each question so the room sees it up front.
+      // The round's answer pool, derived from its questions - see
+      // deriveAnswerPool in lib/answerPool.ts. Shown here as well as
+      // under each question so the room sees it up front.
       answerPool: string[];
     }
   | {
@@ -28,7 +29,7 @@ export type Slide =
       options: string[];
       // Repeated on every question in the round on purpose: teams need
       // the remaining values in front of them while deciding which one
-      // fits. See Round.answerPool.
+      // fits. See deriveAnswerPool in lib/answerPool.ts.
       answerPool: string[];
       imagePath: string | null;
       audioPath: string | null;

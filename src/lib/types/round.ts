@@ -84,17 +84,11 @@ export interface Round {
   // it, only display it. null = nothing shown.
   themeNote: string | null;
 
-  // A fixed set of values that the round's answers are drawn from, each
-  // used exactly once - e.g. eight numbers where one is the answer to
-  // each question.
-  //
-  // Unlike themeNote this stays on screen under *every* question, since
-  // the round only works if teams can see what's still unclaimed while
-  // they decide.
-  //
-  // Stored as a clean array (see parseAnswerList in
-  // lib/questionsImportExport.ts). null or empty = nothing shown.
-  answerPool: string[] | null;
+  // No answerPool field here on purpose - a round's answer pool (a fixed
+  // set of values, each used once, e.g. eight numbers where one is the
+  // answer to each question) is derived live from the questions' own
+  // answers rather than stored separately. See deriveAnswerPool in
+  // lib/answerPool.ts.
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -111,7 +105,6 @@ export function normaliseRound(id: string, data: DocumentData): Round {
     listAnswerReference: round.listAnswerReference ?? null,
     flavour: round.flavour ?? "standard",
     themeNote: round.themeNote ?? null,
-    answerPool: round.answerPool ?? null,
   };
 }
 
@@ -131,7 +124,6 @@ export function newRoundFields(fields: {
   listAnswerReference?: string[] | null;
   flavour?: RoundFlavour;
   themeNote?: string | null;
-  answerPool?: string[] | null;
 }) {
   return {
     order: fields.order,
@@ -142,7 +134,6 @@ export function newRoundFields(fields: {
     listAnswerReference: fields.listAnswerReference ?? null,
     flavour: fields.flavour ?? "standard",
     themeNote: fields.themeNote ?? null,
-    answerPool: fields.answerPool ?? null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
