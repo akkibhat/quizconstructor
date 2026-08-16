@@ -1,5 +1,6 @@
 "use client";
 
+import { realRoundsOf } from "@/lib/types/round";
 import { useMemo } from "react";
 
 import { useQuestions } from "@/lib/hooks/useQuestions";
@@ -19,7 +20,7 @@ import type { Slide } from "@/lib/types/slide";
  */
 export function useSlideList(quiz: Quiz | null | undefined): Slide[] | undefined {
   const rounds = useRounds(quiz?.id);
-  const realRounds = useMemo(() => rounds?.filter((round) => !round.isLongGame) ?? [], [rounds]);
+  const realRounds = useMemo(() => realRoundsOf(rounds), [rounds]);
   const longGameRound = rounds?.find((round) => round.isLongGame);
 
   const realRoundIds = useMemo(() => realRounds.map((round) => round.id), [realRounds]);

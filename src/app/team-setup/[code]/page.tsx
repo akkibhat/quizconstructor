@@ -15,7 +15,7 @@ import { useQuizByCode } from "@/lib/hooks/useQuizByCode";
 import { useRounds } from "@/lib/hooks/useRounds";
 import { useTeams } from "@/lib/hooks/useTeams";
 import { addTeam, deleteTeam } from "@/lib/teams";
-import type { Round } from "@/lib/types/round";
+import { realRoundsOf, type Round } from "@/lib/types/round";
 import type { Team } from "@/lib/types/team";
 
 function AddTeamForm({
@@ -174,7 +174,7 @@ function TeamSetup({ code }: { code: string }) {
     return <CodeNotFound code={code} />;
   }
 
-  const realRounds = rounds.filter((r) => !r.isLongGame);
+  const realRounds = realRoundsOf(rounds);
   const locked = quiz.status !== "setup";
 
   return (

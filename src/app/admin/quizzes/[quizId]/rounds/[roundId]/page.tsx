@@ -1,5 +1,6 @@
 "use client";
 
+import { realRoundsOf } from "@/lib/types/round";
 import { use } from "react";
 
 import { CodeGateLoading, NotFoundPanel } from "@/components/CodeGateStatus";
@@ -30,7 +31,7 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
 
   const round = rounds?.find((r) => r.id === roundId);
   const isLongGame = round?.isLongGame ?? false;
-  const realRoundCount = rounds?.filter((r) => !r.isLongGame).length ?? 0;
+  const realRoundCount = realRoundsOf(rounds).length;
 
   if (quiz === undefined || rounds === undefined || questions === undefined) {
     return <CodeGateLoading />;

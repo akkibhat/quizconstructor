@@ -22,7 +22,7 @@ import {
   swapRoundOrder,
   TooFewRoundsForLongGameError,
 } from "@/lib/rounds";
-import type { Round } from "@/lib/types/round";
+import { realRoundsOf, type Round } from "@/lib/types/round";
 
 function RoundRow({
   round,
@@ -146,7 +146,7 @@ function QuizEditor({ quizId }: { quizId: string }) {
   const { confirmDialog, alertDialog, dialog } = useConfirmDialog();
 
   const longGameRound = rounds?.find((r) => r.isLongGame);
-  const realRounds = rounds?.filter((r) => !r.isLongGame) ?? [];
+  const realRounds = realRoundsOf(rounds);
   const longGameClues = useQuestions(quizId, longGameRound?.id);
 
   if (quiz === undefined || rounds === undefined) {

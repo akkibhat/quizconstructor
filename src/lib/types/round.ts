@@ -157,3 +157,13 @@ export function newRoundFields(fields: {
     updatedAt: serverTimestamp(),
   };
 }
+
+/**
+ * The rounds that count as rounds. The Long Game is stored as one but
+ * isn't part of the numbered sequence - it's excluded from the round
+ * list, from numRounds, and from the reorder controls, and its position
+ * is what the Long Game point formula counts against.
+ */
+export function realRoundsOf(rounds: Round[] | undefined): Round[] {
+  return rounds?.filter((round) => !round.isLongGame) ?? [];
+}

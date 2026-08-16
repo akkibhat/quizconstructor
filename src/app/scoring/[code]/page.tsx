@@ -1,5 +1,6 @@
 "use client";
 
+import { realRoundsOf } from "@/lib/types/round";
 import { use, useState } from "react";
 
 import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
@@ -42,7 +43,7 @@ function ScoringContent({ code }: { code: string }) {
     return <CodeNotFound code={code} />;
   }
 
-  const realRounds = rounds.filter((round) => !round.isLongGame);
+  const realRounds = realRoundsOf(rounds);
   const selectedRound = realRounds.find((round) => round.id === selectedRoundId) ?? realRounds[0];
   const roundEntries = selectedRound ? (scores[selectedRound.id]?.entries ?? {}) : {};
   const roundPosition = selectedRound ? realRounds.indexOf(selectedRound) + 1 : 0;
