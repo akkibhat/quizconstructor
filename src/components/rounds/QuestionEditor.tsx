@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { fieldStyles, fieldStylesCompact, Label } from "@/components/ui/Field";
+import { fieldStyles, fieldStylesCompact, fileInputStyles, Label } from "@/components/ui/Field";
 import { Panel } from "@/components/ui/Panel";
 import { cn } from "@/lib/cn";
 import { uploadQuestionAudio, uploadQuestionImage } from "@/lib/media";
@@ -195,7 +195,7 @@ export function QuestionEditor({
             accept="image/*"
             onChange={handleImageChange}
             disabled={uploading}
-            className="text-xs text-ink-muted file:mr-2 file:rounded-chip file:border file:border-edge-strong file:bg-surface file:px-2 file:py-1 file:text-xs file:text-ink-soft"
+            className={fileInputStyles}
           />
         </label>
         {question.imagePath && <Badge tone="mint">Attached</Badge>}
@@ -210,7 +210,7 @@ export function QuestionEditor({
               accept="audio/*"
               onChange={handleAudioChange}
               disabled={uploading}
-              className="text-xs text-ink-muted file:mr-2 file:rounded-chip file:border file:border-edge-strong file:bg-surface file:px-2 file:py-1 file:text-xs file:text-ink-soft"
+              className={fileInputStyles}
             />
           </label>
           {question.audioPath && (

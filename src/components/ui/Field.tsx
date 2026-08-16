@@ -20,6 +20,13 @@ export const fieldStylesCompact = cn(
   "focus:border-flame focus:outline-none"
 );
 
+/** Native file inputs, whose default button ignores every inherited style. */
+export const fileInputStyles = cn(
+  "text-xs text-ink-muted",
+  "file:mr-2 file:rounded-chip file:border file:border-edge-strong file:bg-surface",
+  "file:px-2 file:py-1 file:text-xs file:text-ink-soft"
+);
+
 export function Label({
   children,
   htmlFor,

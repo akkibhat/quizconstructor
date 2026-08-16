@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
-import { fieldStyles } from "@/components/ui/Field";
+import { fieldStyles, fileInputStyles } from "@/components/ui/Field";
 import { Panel } from "@/components/ui/Panel";
 import { cn } from "@/lib/cn";
 import { exportQuestionsToTsv, importQuestions, parseQuestionsText } from "@/lib/questionsImportExport";
@@ -89,7 +89,7 @@ export function ImportExportSection({
           type="file"
           accept=".tsv,.txt,.csv"
           onChange={handleFileUpload}
-          className="text-xs text-ink-muted file:mr-2 file:rounded-chip file:border file:border-edge-strong file:bg-surface file:px-2 file:py-1 file:text-xs file:text-ink-soft"
+          className={fileInputStyles}
         />
         <Button
           variant="primary"
