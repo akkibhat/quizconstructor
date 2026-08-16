@@ -8,25 +8,17 @@ import {
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/client";
-import type { AudioPlayMode, Question } from "@/lib/types/question";
+import { newQuestionFields, type AudioPlayMode, type Question } from "@/lib/types/question";
 
 /** Adds a new blank question at the end of a round's question list. */
 export async function addQuestion(quizId: string, roundId: string, existingQuestions: Question[]): Promise<void> {
   const highestOrder = existingQuestions.reduce((max, q) => Math.max(max, q.order), 0);
 
   await writeBatch(db)
-    .set(doc(collection(db, "quizzes", quizId, "rounds", roundId, "questions")), {
-      order: highestOrder + 10,
-      text: "",
-      answer: "",
-      points: 1,
-      options: null,
-      imagePath: null,
-      audioPath: null,
-      audioPlayMode: null,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
+    .set(
+      doc(collection(db, "quizzes", quizId, "rounds", roundId, "questions")),
+      newQuestionFields({ order: highestOrder + 10 })
+    )
     .commit();
 }
 

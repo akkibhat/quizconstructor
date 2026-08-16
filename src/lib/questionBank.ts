@@ -11,7 +11,7 @@ import {
 import { db } from "@/lib/firebase/client";
 import type { ParsedQuestion } from "@/lib/questionsImportExport";
 import type { BankQuestion } from "@/lib/types/bankQuestion";
-import type { Question } from "@/lib/types/question";
+import { newQuestionFields, type Question } from "@/lib/types/question";
 
 function bankCollection() {
   return collection(db, "questionBank");
@@ -100,18 +100,15 @@ export async function insertBankQuestionsIntoRound(
 
   for (const bankQuestion of bankQuestions) {
     order += 10;
-    batch.set(doc(collection(db, "quizzes", quizId, "rounds", roundId, "questions")), {
-      order,
-      text: bankQuestion.text,
-      answer: bankQuestion.answer,
-      points: bankQuestion.points,
-      options: null,
-      imagePath: null,
-      audioPath: null,
-      audioPlayMode: null,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    batch.set(
+      doc(collection(db, "quizzes", quizId, "rounds", roundId, "questions")),
+      newQuestionFields({
+        order,
+        text: bankQuestion.text,
+        answer: bankQuestion.answer,
+        points: bankQuestion.points,
+      })
+    );
 
     batch.update(doc(bankCollection(), bankQuestion.id), {
       usageCount: increment(1),

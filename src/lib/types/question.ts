@@ -1,4 +1,4 @@
-import type { DocumentData, Timestamp } from "firebase/firestore";
+import { serverTimestamp, type DocumentData, type Timestamp } from "firebase/firestore";
 
 // How a question's attached audio behaves once its slide becomes current.
 // "autoplay" is for generic background-clue music that should just start
@@ -65,5 +65,37 @@ export function normaliseQuestion(id: string, data: DocumentData): Question {
     id,
     points: question.points ?? 1,
     options: question.options ?? null,
+  };
+}
+
+/**
+ * The complete field set for a new question document. Four places create
+ * questions - the editor's Add button, the TSV importer, the bank, and
+ * quiz duplication - and each used to spell the whole shape out, so a new
+ * field meant finding all four. Anything omitted here gets the same
+ * default a blank question starts with, which also guarantees no
+ * `undefined` reaches Firestore.
+ */
+export function newQuestionFields(fields: {
+  order: number;
+  text?: string;
+  answer?: string;
+  points?: number;
+  options?: string[] | null;
+  imagePath?: string | null;
+  audioPath?: string | null;
+  audioPlayMode?: AudioPlayMode;
+}) {
+  return {
+    order: fields.order,
+    text: fields.text ?? "",
+    answer: fields.answer ?? "",
+    points: fields.points ?? 1,
+    options: fields.options ?? null,
+    imagePath: fields.imagePath ?? null,
+    audioPath: fields.audioPath ?? null,
+    audioPlayMode: fields.audioPlayMode ?? null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
 }

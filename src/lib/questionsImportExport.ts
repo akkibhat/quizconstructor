@@ -1,7 +1,7 @@
-import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { collection, doc, writeBatch } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/client";
-import type { Question } from "@/lib/types/question";
+import { newQuestionFields, type Question } from "@/lib/types/question";
 
 /**
  * Turns a round's questions into a tab-separated file: one question per
@@ -77,18 +77,15 @@ export async function importQuestions(
   for (const question of parsed) {
     order += 10;
     const ref = doc(collection(db, "quizzes", quizId, "rounds", roundId, "questions"));
-    batch.set(ref, {
-      order,
-      text: question.text,
-      answer: question.answer,
-      points: question.points,
-      options: null,
-      imagePath: null,
-      audioPath: null,
-      audioPlayMode: null,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    batch.set(
+      ref,
+      newQuestionFields({
+        order,
+        text: question.text,
+        answer: question.answer,
+        points: question.points,
+      })
+    );
   }
 
   await batch.commit();

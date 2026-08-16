@@ -12,8 +12,8 @@ import {
 
 import { generateQuizCode } from "@/lib/codeGen";
 import { db } from "@/lib/firebase/client";
-import type { Question } from "@/lib/types/question";
-import type { Round } from "@/lib/types/round";
+import { newQuestionFields, normaliseQuestion, type Question } from "@/lib/types/question";
+import { normaliseRound } from "@/lib/types/round";
 
 export interface CreateQuizInput {
   title: string;
@@ -111,6 +111,9 @@ export async function createQuiz(
         roundType: "standard",
         listPrompt: null,
         listAnswerReference: null,
+        flavour: "standard",
+        themeNote: null,
+        answerPool: null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -131,6 +134,9 @@ export async function createQuiz(
         roundType: "standard",
         listPrompt: null,
         listAnswerReference: null,
+        flavour: "standard",
+        themeNote: null,
+        answerPool: null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -139,18 +145,7 @@ export async function createQuiz(
         const clueRef = doc(
           collection(db, "quizzes", quizRef.id, "rounds", longGameRoundRef.id, "questions")
         );
-        batch.set(clueRef, {
-          order: (i + 1) * 10,
-          text: "",
-          answer: "",
-          points: 1,
-          options: null,
-          imagePath: null,
-          audioPath: null,
-          audioPlayMode: null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        batch.set(clueRef, newQuestionFields({ order: (i + 1) * 10 }));
       }
     }
 
@@ -199,20 +194,18 @@ export async function duplicateQuiz(
   const sourceQuiz = sourceQuizSnap.data();
 
   const sourceRoundsSnap = await getDocs(collection(db, "quizzes", quizId, "rounds"));
-  const sourceRounds = sourceRoundsSnap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Omit<Round, "id">),
-  }));
+  // Normalised on the way in, so anything these documents predate is
+  // filled once here rather than guarded again at every write below.
+  const sourceRounds = sourceRoundsSnap.docs.map((d) => normaliseRound(d.id, d.data()));
 
   const questionsByRoundId: Record<string, Question[]> = {};
   for (const round of sourceRounds) {
     const questionsSnap = await getDocs(
       collection(db, "quizzes", quizId, "rounds", round.id, "questions")
     );
-    questionsByRoundId[round.id] = questionsSnap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<Question, "id">),
-    }));
+    questionsByRoundId[round.id] = questionsSnap.docs.map((d) =>
+      normaliseQuestion(d.id, d.data())
+    );
   }
 
   for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
@@ -259,14 +252,12 @@ export async function duplicateQuiz(
         order: round.order,
         title: round.title,
         isLongGame: round.isLongGame,
-        // Defensively defaulted - these fields were added after some test
-        // data existed, and Firestore rejects `undefined` in a write.
-        roundType: round.roundType ?? "standard",
-        listPrompt: round.listPrompt ?? null,
-        listAnswerReference: round.listAnswerReference ?? null,
-        flavour: round.flavour ?? "standard",
-        themeNote: round.themeNote ?? null,
-        answerPool: round.answerPool ?? null,
+        roundType: round.roundType,
+        listPrompt: round.listPrompt,
+        listAnswerReference: round.listAnswerReference,
+        flavour: round.flavour,
+        themeNote: round.themeNote,
+        answerPool: round.answerPool,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -275,19 +266,7 @@ export async function duplicateQuiz(
         const newQuestionRef = doc(
           collection(db, "quizzes", newQuizRef.id, "rounds", newRoundRef.id, "questions")
         );
-        batch.set(newQuestionRef, {
-          order: question.order,
-          text: question.text,
-          answer: question.answer,
-          // Defensively defaulted - added after some test data existed.
-          points: question.points ?? 1,
-          options: question.options ?? null,
-          imagePath: question.imagePath,
-          audioPath: question.audioPath,
-          audioPlayMode: question.audioPlayMode,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        batch.set(newQuestionRef, newQuestionFields(question));
       }
     }
     await batch.commit();
