@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { TiebreakGuessList } from "@/components/control/TiebreakGuessList";
+import { TiebreakWinnerPicker } from "@/components/control/TiebreakWinnerPicker";
 import { AppShell, PageHeader } from "@/components/ui/AppShell";
-import { ScreenFrame } from "@/components/ui/ScreenFrame";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { fieldStylesCompact } from "@/components/ui/Field";
-import { cn } from "@/lib/cn";
+import { ScreenFrame } from "@/components/ui/ScreenFrame";
 import { endTiebreak, revealTiebreak, setTiebreakGuesses, startTiebreak } from "@/lib/liveState";
 import { computeTiebreakWinner } from "@/lib/tieDetection";
 import { applyTiebreakResult, detectDeadHeats, rankTeamsByGuess, spliceResolvedOrder } from "@/lib/tiebreakResults";
@@ -254,114 +253,27 @@ export function TiebreakPanel({
       </ScreenFrame>
 
       {tiebreak.mode === "app-computes" ? (
-        <div className="space-y-2">
-          {contestedTeams.map((team) => {
-            const isLevel = levelTeamIds.has(team.id);
-            const isWinner = winnerId === team.id && !isLevel;
-            const guess = draftGuesses[team.id];
-            const distance =
-              tiebreak.revealed && guess !== undefined
-                ? Math.abs(guess - tiebreak.correctAnswer)
-                : null;
-            return (
-              <div
-                key={team.id}
-                className={cn(
-                  "flex items-center justify-between gap-3 rounded-panel border p-3",
-                  isWinner
-                    ? "border-flame bg-flame/15"
-                    : isLevel
-                      ? "border-danger/50 bg-danger/10"
-                      : "border-edge bg-surface"
-                )}
-              >
-                <span className="flex flex-wrap items-center gap-2 text-ink">
-                  {team.name}
-                  {isWinner && <Badge tone="flame">Winner</Badge>}
-                  {isLevel && (
-                    <span className="rounded-chip border border-danger/50 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-danger uppercase">
-                      Level
-                    </span>
-                  )}
-                  {distance !== null && (
-                    <span className="text-xs text-ink-muted tabular-nums">{distance} away</span>
-                  )}
-                </span>
-                <input
-                  type="number"
-                  value={draftGuesses[team.id] ?? ""}
-                  onChange={(event) => updateGuess(team.id, event.target.value)}
-                  className={cn(fieldStylesCompact, "w-32 tabular-nums")}
-                  placeholder="Guess"
-                />
-              </div>
-            );
-          })}
-          {!tiebreak.revealed && (
-            <Button
-              variant="primary"
-              size="lg"
-              className="mt-2"
-              onClick={() => revealTiebreak(quizId, hostUid, tiebreak)}
-            >
-              Reveal Winner
-            </Button>
-          )}
-        </div>
+        <TiebreakGuessList
+          contestedTeams={contestedTeams}
+          guesses={draftGuesses}
+          levelTeamIds={levelTeamIds}
+          winnerId={winnerId}
+          revealed={tiebreak.revealed}
+          correctAnswer={tiebreak.correctAnswer}
+          onGuessChange={updateGuess}
+          onReveal={() => revealTiebreak(quizId, hostUid, tiebreak)}
+        />
       ) : (
-        <div>
-          {tiebreak.revealed && (
-            <p className="mb-3 text-sm text-ink-muted">Tap whoever came closest:</p>
-          )}
-          <div className="space-y-2">
-            {contestedTeams.map((team) => {
-              const isWinner = winnerId === team.id;
-              return (
-                <button
-                  key={team.id}
-                  type="button"
-                  disabled={!tiebreak.revealed}
-                  onClick={() => setManualWinnerId(team.id)}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-panel border p-3 text-left transition-colors",
-                    isWinner
-                      ? "border-flame bg-flame/15"
-                      : "border-edge bg-surface enabled:hover:border-flame/60",
-                    !tiebreak.revealed && "cursor-default opacity-70"
-                  )}
-                >
-                  <span className="text-ink">{team.name}</span>
-                  {isWinner && <Badge tone="flame">Winner</Badge>}
-                </button>
-              );
-            })}
-          </div>
-          {!tiebreak.revealed ? (
-            <Button
-              variant="primary"
-              size="lg"
-              className="mt-4"
-              onClick={() => revealTiebreak(quizId, hostUid, tiebreak)}
-            >
-              Reveal Answer
-            </Button>
-          ) : (
-            <div className="mt-4">
-              <Button
-                variant="danger"
-                disabled={followUpsAvailable === 0 || isSaving}
-                onClick={declareDeadHeat}
-              >
-                {isSaving ? "Starting…" : "Dead heat — run another question"}
-              </Button>
-              <p className="mt-2 text-xs text-ink-muted">
-                {followUpsAvailable > 0
-                  ? `Can't split them? This pulls a fresh question and runs it between the same teams. ${followUpsAvailable} unused question${followUpsAvailable === 1 ? "" : "s"} left.`
-                  : "No unused questions left in the bank to run a decider with."}
-              </p>
-            </div>
-          )}
-        </div>
+        <TiebreakWinnerPicker
+          contestedTeams={contestedTeams}
+          winnerId={winnerId}
+          revealed={tiebreak.revealed}
+          onPick={setManualWinnerId}
+          onReveal={() => revealTiebreak(quizId, hostUid, tiebreak)}
+          onDeclareDeadHeat={declareDeadHeat}
+          isSaving={isSaving}
+          followUpsAvailable={followUpsAvailable}
+        />
       )}
 
       {tiebreak.revealed && (
