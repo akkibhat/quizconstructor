@@ -8,7 +8,7 @@ import { Panel } from "@/components/ui/Panel";
 import { cn } from "@/lib/cn";
 import { useBankQuestions } from "@/lib/hooks/useBankQuestions";
 import { categoriesOf, insertBankQuestionsIntoRound, pickRandom, saveRoundQuestionsToBank } from "@/lib/questionBank";
-import { ROUND_FLAVOUR_INFO } from "@/lib/roundFlavourLabels";
+import { ROUND_FLAVOUR_INFO, ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
 import type { Question } from "@/lib/types/question";
 import type { RoundFlavour } from "@/lib/types/round";
 
@@ -25,8 +25,8 @@ export function BankSection({
   questions: Question[];
   flavour: RoundFlavour;
 }) {
-  // Bank questions carry no options field at all, same gap as the TSV
-  // importer - only worth flagging for flavours that actually use options.
+  // A batch import into the bank has no column for options (same gap as
+  // the TSV importer), so only worth flagging for flavours that use them.
   const needsOptions = ROUND_FLAVOUR_INFO[flavour].fields.options !== "none";
   const bank = useBankQuestions();
   const [category, setCategory] = useState("");
@@ -37,7 +37,11 @@ export function BankSection({
   const [message, setMessage] = useState<string | null>(null);
 
   const categories = bank ? categoriesOf(bank) : [];
-  const inCategory = bank?.filter((q) => q.category === category) ?? [];
+  // A category pool can mix flavours (e.g. Geography holding both plain
+  // and True/False questions) - only ever surface and pull the ones that
+  // match the round being built, so an import can't land a T/F question
+  // as a plain one or vice versa.
+  const inCategory = bank?.filter((q) => q.category === category && q.flavour === flavour) ?? [];
   const visible = hideUsed ? inCategory.filter((q) => q.usageCount === 0) : inCategory;
   const selected = (bank ?? []).filter((q) => selectedIds.includes(q.id));
 
@@ -67,7 +71,7 @@ export function BankSection({
     setIsBusy(true);
     setMessage(null);
     try {
-      const saved = await saveRoundQuestionsToBank(saveCategory, questions);
+      const saved = await saveRoundQuestionsToBank(saveCategory, flavour, questions);
       setMessage(
         saved === 0
           ? "Nothing to save - this round has no written questions yet."
@@ -98,7 +102,9 @@ export function BankSection({
           >
             <option value="">Choose a category…</option>
             {categories.map((name) => {
-              const unused = bank?.filter((q) => q.category === name && q.usageCount === 0).length;
+              const unused = bank?.filter(
+                (q) => q.category === name && q.flavour === flavour && q.usageCount === 0
+              ).length;
               return (
                 <option key={name} value={name}>
                   {name} ({unused} unused)
@@ -119,9 +125,11 @@ export function BankSection({
 
         {category && visible.length === 0 && (
           <p className="text-xs text-ink-muted">
-            {hideUsed
-              ? "Every question in this pool has been used - untick above to reuse one, or add more on the bank page."
-              : "This pool is empty."}
+            {inCategory.length === 0
+              ? `No ${ROUND_FLAVOUR_LABELS[flavour]} questions in this category yet - add some on the bank page, tagged with this flavour.`
+              : hideUsed
+                ? "Every question of this flavour in this pool has been used - untick above to reuse one, or add more on the bank page."
+                : "This pool is empty."}
           </p>
         )}
 
@@ -181,10 +189,10 @@ export function BankSection({
               })}
             </ul>
 
-            {needsOptions && selected.length > 0 && (
+            {needsOptions && selected.some((q) => !q.options || q.options.length === 0) && (
               <p className="rounded-chip border border-flame/40 bg-flame/8 px-3 py-2 text-xs text-flame">
-                The bank doesn&apos;t store options, so these will land as plain open questions -
-                add options to each afterward in the list below.
+                Some selected questions have no options saved - those will land as plain open
+                questions. Add options to each afterward in the list below.
               </p>
             )}
 
@@ -203,6 +211,9 @@ export function BankSection({
 
       <div className="space-y-2 border-t border-edge pt-4">
         <Label htmlFor="saveCategory">Save this round&apos;s questions to a pool</Label>
+        <p className="text-xs text-ink-muted">
+          Tagged as {ROUND_FLAVOUR_LABELS[flavour]}, matching this round.
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           <input
             id="saveCategory"

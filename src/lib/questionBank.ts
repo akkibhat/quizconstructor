@@ -12,24 +12,29 @@ import { db } from "@/lib/firebase/client";
 import type { ParsedQuestion } from "@/lib/questionsImportExport";
 import type { BankQuestion } from "@/lib/types/bankQuestion";
 import { newQuestionFields, type Question } from "@/lib/types/question";
+import type { RoundFlavour } from "@/lib/types/round";
 
 function bankCollection() {
   return collection(db, "questionBank");
 }
 
-/** Adds a single question to a category pool. */
+/** Adds a single question to a category pool, tagged with the flavour it's meant for. */
 export async function addBankQuestion(
   category: string,
+  flavour: RoundFlavour,
   text: string,
   answer: string,
-  points: number
+  points: number,
+  options: string[] | null = null
 ): Promise<void> {
   const batch = writeBatch(db);
   batch.set(doc(bankCollection()), {
     category: category.trim(),
+    flavour,
     text: text.trim(),
     answer: answer.trim(),
     points,
+    options,
     usageCount: 0,
     lastUsedAt: null,
     lastUsedQuizId: null,
@@ -42,7 +47,7 @@ export async function addBankQuestion(
 
 export async function updateBankQuestion(
   questionId: string,
-  updates: Partial<Pick<BankQuestion, "category" | "text" | "answer" | "points">>
+  updates: Partial<Pick<BankQuestion, "category" | "flavour" | "text" | "answer" | "points" | "options">>
 ): Promise<void> {
   await updateDoc(doc(bankCollection(), questionId), { ...updates, updatedAt: serverTimestamp() });
 }
@@ -55,19 +60,24 @@ export async function deleteBankQuestion(questionId: string): Promise<void> {
  * Bulk-adds parsed questions to a category, reusing the same
  * `Question | Answer | Points` format the per-round importer already
  * accepts (see lib/questionsImportExport.ts) - so a spreadsheet of
- * material can be dropped straight into a pool.
+ * material can be dropped straight into a pool. The format has no column
+ * for options, so a batch always lands with options: null - same gap as
+ * the per-round TSV importer.
  */
 export async function importBankQuestions(
   category: string,
+  flavour: RoundFlavour,
   parsed: ParsedQuestion[]
 ): Promise<void> {
   const batch = writeBatch(db);
   for (const question of parsed) {
     batch.set(doc(bankCollection()), {
       category: category.trim(),
+      flavour,
       text: question.text,
       answer: question.answer,
       points: question.points,
+      options: null,
       usageCount: 0,
       lastUsedAt: null,
       lastUsedQuizId: null,
@@ -107,6 +117,7 @@ export async function insertBankQuestionsIntoRound(
         text: bankQuestion.text,
         answer: bankQuestion.answer,
         points: bankQuestion.points,
+        options: bankQuestion.options,
       })
     );
 
@@ -125,14 +136,16 @@ export async function insertBankQuestionsIntoRound(
 /**
  * Pushes a round's questions up into a category pool - the reverse
  * direction, for when a round was written from scratch and is worth
- * keeping. Questions with no text are skipped, since a half-filled row
- * in the editor isn't worth banking.
+ * keeping. Tagged with the round's own flavour, since every question in
+ * a round already shares one. Questions with no text are skipped, since a
+ * half-filled row in the editor isn't worth banking.
  *
  * The copies start with a clean usage record rather than inheriting one:
  * they're new bank entries, and the quiz they came from is already built.
  */
 export async function saveRoundQuestionsToBank(
   category: string,
+  flavour: RoundFlavour,
   questions: Question[]
 ): Promise<number> {
   const worthKeeping = questions.filter((question) => question.text.trim().length > 0);
@@ -144,9 +157,11 @@ export async function saveRoundQuestionsToBank(
   for (const question of worthKeeping) {
     batch.set(doc(bankCollection()), {
       category: category.trim(),
+      flavour,
       text: question.text,
       answer: question.answer,
       points: question.points ?? 1,
+      options: question.options,
       usageCount: 0,
       lastUsedAt: null,
       lastUsedQuizId: null,

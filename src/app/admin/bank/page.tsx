@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { useBankQuestions } from "@/lib/hooks/useBankQuestions";
 import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { categoriesOf } from "@/lib/questionBank";
+import { ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
 
 function BankContent() {
   const questions = useBankQuestions();
@@ -44,6 +45,12 @@ function BankContent() {
           const inCategory = questions?.filter((q) => q.category === category) ?? [];
           const unused = inCategory.filter((q) => q.usageCount === 0).length;
           const isOpen = openCategory === category;
+          // What mix of question types this pool holds - e.g. "12 True or
+          // False, 8 Question" - so it's clear at a glance whether a
+          // category actually has the type a round needs before opening it.
+          const flavourCounts = [...new Set(inCategory.map((q) => q.flavour))]
+            .map((f) => `${inCategory.filter((q) => q.flavour === f).length} ${ROUND_FLAVOUR_LABELS[f]}`)
+            .join(", ");
 
           return (
             <div key={category}>
@@ -57,8 +64,11 @@ function BankContent() {
                     : "border-edge bg-surface hover:border-flame/40"
                 )}
               >
-                <span className="font-display font-semibold text-ink">{category}</span>
-                <span className="flex items-center gap-3 text-xs text-ink-muted">
+                <span className="min-w-0">
+                  <span className="font-display block font-semibold text-ink">{category}</span>
+                  <span className="block truncate text-xs text-ink-muted">{flavourCounts}</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-3 text-xs text-ink-muted">
                   <span className="tabular-nums">
                     {inCategory.length} question{inCategory.length === 1 ? "" : "s"}
                   </span>

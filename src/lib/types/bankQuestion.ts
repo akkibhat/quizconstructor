@@ -1,4 +1,6 @@
-import type { Timestamp } from "firebase/firestore";
+import type { DocumentData, Timestamp } from "firebase/firestore";
+
+import type { RoundFlavour } from "@/lib/types/round";
 
 /**
  * Firestore document at questionBank/{questionId} - top-level, since the
@@ -18,9 +20,21 @@ export interface BankQuestion {
   // categories that could end up with orphans or empties.
   category: string;
 
+  // What kind of question this is (standard, true/false, multiple choice,
+  // ...) - the same enum a round's flavour uses. A category pool can mix
+  // flavours (e.g. Geography holds both plain and true/false questions),
+  // so the round editor's bank picker filters by category *and* this,
+  // to only ever surface questions that fit the round being built.
+  flavour: RoundFlavour;
+
   text: string;
   answer: string;
   points: number;
+
+  // Choices for flavours that need them (multiple choice, odd one out) -
+  // same shape and meaning as Question.options. null for flavours that
+  // don't use options.
+  options: string[] | null;
 
   // --- Usage tracking -----------------------------------------------
   // Recorded when a question is pulled into a quiz round, so the picker
@@ -40,4 +54,19 @@ export interface BankQuestion {
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/**
+ * Fills in fields that bank questions saved before flavour/options existed
+ * won't have - same reasoning as normaliseQuestion. Legacy questions default
+ * to "standard", same as a round that's never had its flavour changed.
+ */
+export function normaliseBankQuestion(id: string, data: DocumentData): BankQuestion {
+  const question = data as Omit<BankQuestion, "id">;
+  return {
+    ...question,
+    id,
+    flavour: question.flavour ?? "standard",
+    options: question.options ?? null,
+  };
 }

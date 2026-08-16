@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import { useCollectionList } from "@/lib/hooks/useFirestore";
-import type { BankQuestion } from "@/lib/types/bankQuestion";
+import { normaliseBankQuestion, type BankQuestion } from "@/lib/types/bankQuestion";
 
 /**
  * The host's whole question bank, grouped by category then by when each
@@ -17,7 +17,9 @@ import type { BankQuestion } from "@/lib/types/bankQuestion";
  * by category *and* creation time would need a composite index.
  */
 export function useBankQuestions(): BankQuestion[] | undefined {
-  const questions = useCollectionList<BankQuestion>(["questionBank"]);
+  const questions = useCollectionList<BankQuestion>(["questionBank"], {
+    normalise: normaliseBankQuestion,
+  });
 
   return useMemo(
     () =>
