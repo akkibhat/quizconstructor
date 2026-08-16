@@ -45,20 +45,14 @@ const MAX_CODE_ATTEMPTS = 5;
  * number of empty rounds (titled "Round 1", "Round 2", ...) as a follow-up
  * step.
  *
- * This is deliberately NOT one single transaction covering the rounds too.
- * The round documents' security rule needs to `get()` the parent quiz doc
- * to confirm the caller is its host - but rules evaluate against the
- * state of the database as of the *start* of a transaction, so if the
- * quiz doc were being created in that same transaction, the rule would
- * see it as not existing yet and reject the write. Creating the quiz
- * first (so it's genuinely committed) and then scaffolding rounds as a
- * separate batch avoids that chicken-and-egg problem. If the round
- * scaffolding step were to fail, the quiz still exists and rounds can be
- * added manually via "Add Round" - not a scenario worth full rollback
- * complexity for a personal tool.
+ * Deliberately two steps rather than one transaction: a round's security
+ * rule reads the parent quiz to check the host, but rules see the
+ * database as it was when the transaction started - so a quiz created in
+ * that same transaction would look absent and the write would be
+ * rejected. If the rounds step fails the quiz still exists and rounds can
+ * be added by hand.
  *
- * Retries with a new random code (up to MAX_CODE_ATTEMPTS times) if the
- * chosen code happens to already be in use.
+ * Retries with a fresh code (up to MAX_CODE_ATTEMPTS) if one is taken.
  */
 export async function createQuiz(
   input: CreateQuizInput
@@ -190,13 +184,9 @@ export async function unarchiveQuiz(quizId: string): Promise<void> {
  * security-rules reason (rounds/questions need the quiz doc to already
  * exist so their write rules can look up hostUid).
  *
- * Media (images/audio) is NOT copied in Storage - the cloned question
- * docs keep pointing at the *original* quiz's Storage paths. This is
- * deliberate, not an oversight: quizzes are only ever archived, never
- * hard-deleted (see the note on Quiz.archived), so the original's files
- * are never at risk of disappearing out from under the clone. Copying the
- * actual file bytes would mean downloading and re-uploading every image
- * and audio file for no real benefit.
+ * Media isn't copied in Storage - cloned questions keep pointing at the
+ * original quiz's paths. Safe because quizzes are only ever archived,
+ * never hard-deleted, so those files can't vanish from under the clone.
  */
 export async function duplicateQuiz(
   quizId: string,

@@ -24,19 +24,15 @@ export interface LeaderboardEntry {
  * resolved tiebreak placings into a ranked running total per team,
  * sorted highest first.
  *
- * Computed client-side on every read rather than as a maintained
- * aggregate field: at this scale (a handful of teams, a dozen rounds)
- * summing a few small documents in the browser is instant, and it avoids
- * a second source of truth that could drift from the actual scores - see
- * the plan doc's Scoring Computation section for the full reasoning.
+ * Summed in the browser on every read rather than kept as an aggregate
+ * field - instant at this scale, and it avoids a second source of truth
+ * that could drift from the actual scores.
  *
- * Sorting is by total first, then by the placing from a settled tie for
- * the *lead* - without that secondary key, teams on the same total sit in
- * whatever sequence the sort happened to leave them in, so "1st place"
- * would be arbitrary rather than earned. A settled tie at the bottom
- * deliberately doesn't reorder anything: the only thing at stake there is
- * the prize badge, which LeaderboardView attaches to the winning team
- * directly.
+ * Sorted by total, then by the placing from a settled tie for the lead:
+ * without that second key, teams on equal totals sit in whatever order
+ * the sort left them, making "1st place" arbitrary. A settled tie at the
+ * bottom doesn't reorder anything - only the prize badge is at stake
+ * there, and LeaderboardView puts that on the winner directly.
  */
 export function useLeaderboardTotals(quizId: string | undefined): LeaderboardEntry[] | undefined {
   const teams = useTeams(quizId);

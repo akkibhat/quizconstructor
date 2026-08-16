@@ -3,17 +3,13 @@ import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 
 /**
- * Records one team's mark for one question, then recomputes and writes
- * their round total from *all* their marks in this round - so the round's
- * score of record (scores/{roundId}.entries[teamId], the same field paper
- * scoring writes via setRoundScore) always reflects the sum of individual
- * question marks, kept in sync on every change rather than requiring a
- * separate "save" step.
+ * Records one mark, then rewrites the team's round total from all their
+ * marks - so scores/{roundId}.entries[teamId], the same field paper
+ * scoring writes, always matches the sum. No separate save step.
  *
- * Takes the team's current marks map (from the already-subscribed
- * useQuestionMarks hook) rather than reading it server-side first - this
- * app has one scorer working on one team at a time, so there's no
- * concurrent-write race to worry about, and it avoids an extra round trip.
+ * Takes the current marks from the caller's subscription rather than
+ * re-reading them: one scorer works one team at a time, so there's no
+ * race, and it saves a round trip.
  */
 export async function setQuestionMark(
   quizId: string,

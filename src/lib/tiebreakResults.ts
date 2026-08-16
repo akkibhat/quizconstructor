@@ -49,15 +49,13 @@ export async function applyTiebreakResult(
  * Finds teams a tiebreak has failed to separate: groups of two or more
  * whose guesses are *exactly* as close to the answer as each other.
  *
- * That covers both ways it happens - two teams writing down the same
- * number, and two teams landing either side of it at equal distance
- * (488 and 512 against 500). Neither has won, so neither should be
- * handed a placing; the caller runs another question between just these
- * teams instead.
+ * Covers both ways it happens: identical guesses, and guesses either
+ * side of the answer at equal distance (488 and 512 against 500).
+ * Neither has won, so neither gets a placing - the caller runs another
+ * question between just them.
  *
- * Groups come back in finishing order, best-placed first, and teams
- * without a guess are ignored (the confirm step requires every contested
- * team to have one before it will rank anything).
+ * Groups come back best-placed first. Teams without a guess are skipped;
+ * confirming requires everyone to have one anyway.
  */
 export function detectDeadHeats(
   correctAnswer: number,

@@ -1,34 +1,24 @@
 import type { DocumentData, Timestamp } from "firebase/firestore";
 
-// "standard" is a normal round built from Question docs. "list" is The
-// Gauntlet - a single-prompt round ("name any 10 of the top 25 busiest
-// airports") scored on how many correct answers a team gave in a row
-// before their first miss, using the same raw-score input every other
-// round already has (see the plan doc for why no new scoring UI was
-// needed). Kept as the internal value "list" (not renamed to match the
-// user-facing "Gauntlet" name) since it's just a code identifier, not
-// something anyone but a developer reading this ever sees. Only
-// meaningful when isLongGame is false - the two round specializations are
-// independent axes, not alternatives to each other.
+// "standard" is a normal round of questions. "list" is The Gauntlet: one
+// shared prompt ("name any 10 of the top 25 busiest airports"), scored on
+// how many a team got right in a row before their first miss. Still
+// called "list" internally - it's only a code identifier. Only meaningful
+// when isLongGame is false.
 export type RoundType = "standard" | "list";
 
 /**
- * A round's presentation style. Purely cosmetic: it sets the label shown
- * above each question on the projector and gives the host a name for what
- * they're building. It deliberately does NOT change the slide sequence,
- * the scoring, or anything structural.
+ * A round's presentation style - the label above each question on the
+ * projector. Cosmetic only: it changes nothing about the slide sequence
+ * or the scoring.
  *
- * That's why it's a separate axis from RoundType rather than more values
- * on it. RoundType distinguishes The Gauntlet, which genuinely rewrites
- * the slide sequence (one shared prompt instead of per-question slides).
- * Everything here keeps the normal title -> questions -> answers flow and
- * only changes how a question looks - so folding the two together would
- * make combinations like "a multiple-choice Gauntlet" impossible to
- * express without a special case.
+ * Kept as a separate axis from RoundType because RoundType marks The
+ * Gauntlet, which genuinely rewrites the slide sequence. Merging them
+ * would make a combination like a multiple-choice Gauntlet inexpressible.
  *
- * Several styles need no machinery at all beyond this label: Finish the
- * Lyric is a question with audio attached, and Picture This and Close-Up
- * are questions with an image - all of which already worked.
+ * Most styles need nothing beyond this label: Finish the Lyric is a
+ * question with audio, Picture This and Close-Up are questions with an
+ * image.
  */
 export type RoundFlavour =
   | "standard"
@@ -108,11 +98,9 @@ export interface Round {
   // used exactly once - e.g. eight numbers where one is the answer to
   // each question.
   //
-  // Unlike themeNote this is shown under *every* question in the round,
-  // not just the title slide: the whole point is that teams weigh up
-  // which remaining value fits, so the list has to stay on screen while
-  // they're answering. Values are deliberately chosen to look plausible
-  // for more than one question, which is what makes the round work.
+  // Unlike themeNote this stays on screen under *every* question, since
+  // the round only works if teams can see what's still unclaimed while
+  // they decide.
   //
   // Stored as a clean array (see parseAnswerList in
   // lib/questionsImportExport.ts). null or empty = nothing shown.

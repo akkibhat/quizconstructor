@@ -30,21 +30,15 @@ export async function setRoundScore(
 
 /**
  * Points for a correct Long Game guess at a given round position. Spreads
- * evenly from `maxPoints` at round 1 down to exactly `1` at the last
- * round, whatever `maxPoints` and `numRounds` are - e.g. maxPoints=10 over
- * 8 rounds gives 10, 9, 7, 6, 5, 4, 2, 1. Pinning both endpoints exactly
- * (round 1 = maxPoints, last round = 1) is deliberate: it guarantees the
- * last round is always the near-free "everyone should get this" catch-up
- * moment, regardless of how maxPoints/numRounds are configured - a plain
- * constant step size (maxPoints / numRounds) can't promise that (e.g. 10
- * over 3 rounds would leave the last round worth 3, not 1).
+ * evenly from `maxPoints` at round 1 down to exactly 1 at the last round
+ * - e.g. 10 over 8 rounds gives 10, 9, 7, 6, 5, 4, 2, 1. Pinning both
+ * ends keeps the last round the near-free catch-up moment whatever the
+ * settings; a constant step of maxPoints/numRounds couldn't.
  *
- * `roundPosition` must be the round's 1-indexed *position* among sorted
- * real rounds (1st round = 1, 2nd = 2, ...) - NOT Round.order, which is a
- * gapped sort key (10, 20, 30, ...) and would badly wrong this for any
- * round past the first. `numRounds` must likewise be the *current* count
- * of real rounds, not a cached/stored value - see the "numRounds can
- * drift" note in the plan doc.
+ * `roundPosition` is the round's 1-indexed position among real rounds,
+ * NOT Round.order - that's a gapped sort key and would be wrong for every
+ * round past the first. `numRounds` must be the live count, not a stored
+ * one, since rounds can be added or removed after a quiz is created.
  */
 export function calculateLongGamePoints(
   roundPosition: number,

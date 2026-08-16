@@ -52,12 +52,9 @@ export function parseQuestionsText(input: string): ParsedQuestion[] {
  * ("1.", "1)", "-", "•", "*") if present, so a numbered or bulleted paste
  * comes out as a plain list either way.
  *
- * Scope note: this only handles one-answer-per-line input. It does NOT
- * try to extract a single column out of a multi-column paste (e.g. a
- * whole "rank / name / country / passengers" table copied straight from
- * a Wikipedia-style page) - which column is "the answer" isn't reliably
- * guessable, so that kind of source needs trimming down to just the
- * answer names first.
+ * One answer per line only. It won't pull a single column out of a
+ * pasted table - which column holds the answer isn't guessable, so those
+ * need trimming down first.
  */
 export function parseAnswerList(input: string): string[] {
   return input

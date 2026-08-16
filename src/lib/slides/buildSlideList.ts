@@ -3,42 +3,23 @@ import { ROUND_FLAVOUR_LABELS, type Round } from "@/lib/types/round";
 import type { Slide } from "@/lib/types/slide";
 
 /**
- * Turns a quiz's rounds and questions into the exact, deterministic
- * sequence of slides the presenter steps through.
+ * Turns a quiz's rounds and questions into the exact sequence of slides
+ * the presenter steps through.
  *
- * This is a pure function on purpose: it's never stored in Firestore.
- * Both the Controller and Display routes call it independently on the same
- * rounds/questions data they already subscribe to, so they always agree on
- * what "slide index 14" means - Next/Previous just moves an index into
- * this array.
+ * Pure, and never stored: Controller and Display each call it on the data
+ * they already have, so both agree on what "slide 14" means.
  *
- * Sequence per *standard* round, repeated for every standard round in order:
- *   round title -> each question (no answer shown) -> Long Game clue
- *   (if enabled) -> "Answers" divider -> each answer, same order as the
- *   questions.
- * A round with roundType "list" (The Gauntlet - see Round.roundType)
- * instead gets: round title -> its single prompt -> Long Game clue (if
- * enabled) -> its single reveal. One shared prompt/reveal stands in for
- * the usual per-question slides, since it really is one shared question
- * with many answer slots rather than several distinct questions.
- * After every round has run through this, if Long Game is enabled, one
- * final slide reveals the overall Long Game answer.
+ * Per round: title -> questions -> Long Game clue (if enabled) ->
+ * "Answers" divider -> answers. A Gauntlet round swaps the questions and
+ * answers for its one shared prompt and one reveal. After every round, if
+ * the Long Game is on, one last slide gives its answer.
  *
- * @param realRounds - every *non*-Long-Game round in the quiz, sorted by
- *   `order` ascending. (The Long Game round itself, if any, is passed
- *   separately via `longGameClues` - it isn't one of the rounds a slide
- *   sequence steps through in its own right.)
- * @param questionsByRound - each real round's questions, sorted by `order`
- *   ascending, keyed by roundId.
- * @param longGameEnabled - whether the quiz has the Long Game turned on.
- * @param longGameClues - the Long Game round's clues (stored as that
- *   round's "questions" - see Round.isLongGame), sorted by `order`
- *   ascending. Matched to realRounds *by position*, not by any shared ID:
- *   clue at index i is shown at the end of realRounds[i], whichever round
- *   that currently is. This is what makes "clue 1 is the vaguest, shown at
- *   the first round" hold regardless of how rounds get reordered.
- * @param longGameFinalAnswer - the quiz's overall Long Game solution, used
- *   for the one closing slide.
+ * @param realRounds - the quiz's rounds excluding the Long Game one,
+ *   sorted by `order`.
+ * @param longGameClues - the Long Game round's clues, matched to
+ *   realRounds *by position* rather than by id: clue i shows at the end of
+ *   realRounds[i]. That's what keeps "clue 1 is the vaguest" true however
+ *   the rounds are later reordered.
  */
 export function buildSlideList(
   realRounds: Round[],

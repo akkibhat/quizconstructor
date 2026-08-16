@@ -11,11 +11,10 @@ import { useAuth } from "@/lib/hooks/useAuth";
  * Content Builder, Team Setup, Controller, Scoring). Redirects to /login
  * if nobody's signed in.
  *
- * This is a UX guard only, not real security - it just avoids flashing an
- * admin page at someone who isn't signed in before they get bounced. The
- * actual enforcement happens in Firestore/Storage security rules, since
- * every read/write goes through those regardless of which route rendered
- * the button that triggered it.
+ * A UX guard, not security - it only avoids flashing an admin page at
+ * someone about to be bounced. The real enforcement is in the Firestore
+ * and Storage rules, which every read and write goes through regardless
+ * of which route rendered the button.
  */
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

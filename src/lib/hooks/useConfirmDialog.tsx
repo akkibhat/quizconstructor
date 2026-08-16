@@ -5,16 +5,13 @@ import { useCallback, useState } from "react";
 import { ConfirmDialog, type ConfirmDialogState } from "@/components/ConfirmDialog";
 
 /**
- * Promise-based, styled replacement for the browser's native
- * confirm()/alert(). `confirmDialog`/`alertDialog` have the same call
- * shape as the originals - just async, so call sites read almost
- * identically:
+ * Styled stand-in for the browser's confirm()/alert(), with the same call
+ * shape - just async:
  *
- *   if (await confirmDialog(`Delete "${quiz.title}"?`)) { archiveQuiz(quiz.id); }
+ *   if (await confirmDialog(`Delete "${quiz.title}"?`)) archiveQuiz(quiz.id);
  *
- * Render the returned `dialog` element once, anywhere in the page (it's
- * a fixed-position overlay, so placement doesn't matter) - it's invisible
- * until a confirm/alert is actually in progress.
+ * Render the returned `dialog` anywhere in the page; it's a fixed overlay
+ * and invisible until something is actually being asked.
  */
 export function useConfirmDialog() {
   const [dialogState, setDialogState] = useState<ConfirmDialogState>(null);

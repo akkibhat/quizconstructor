@@ -121,19 +121,16 @@ export function TiebreakPanel({
       : Boolean(manualWinnerId));
 
   /**
-   * Records the placing, then returns to the leaderboard - unless the
-   * guesses failed to separate somebody, in which case it pulls a fresh
-   * question and runs another decider between just those teams.
+   * Records the placing and returns to the leaderboard - unless the
+   * guesses left someone level, in which case it runs another decider
+   * between just those teams.
    *
-   * Until a result is actually recorded the tie stays flagged as
-   * outstanding, and leaving via "Back to Leaderboard" records nothing -
-   * so an abandoned tiebreak can't quietly award a prize.
+   * Nothing is recorded until this runs, so abandoning via "Back to
+   * Leaderboard" can't quietly award a prize.
    *
-   * Ranking everyone rather than only the winner matters for a tie across
-   * the podium, where 2nd and 3rd are real placings too. For a tie at the
-   * bottom only the winner means anything (they take the prize; the board
-   * isn't reordered), but ranking the rest is what marks the whole group
-   * as settled so the "Tiebreak pending" badges clear.
+   * Everyone is ranked, not just the winner: 2nd and 3rd are real
+   * placings in a podium tie, and ranking the rest is what marks the
+   * group settled so the "Tiebreak pending" badges clear.
    */
   async function confirmResult() {
     if (!canProceed) return;

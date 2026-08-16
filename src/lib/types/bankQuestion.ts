@@ -1,17 +1,13 @@
 import type { Timestamp } from "firebase/firestore";
 
 /**
- * Firestore document at questionBank/{questionId} - a **top-level**
- * collection, not nested under any quiz, because the whole point is that
- * it outlives individual quiz nights. Same shape of decision as
- * tiebreakQuestions: auth-only rather than code-readable, since it's the
- * host's own private stock of material rather than anything a room full
- * of guests should be able to browse.
+ * Firestore document at questionBank/{questionId} - top-level, since the
+ * bank outlives any one quiz night. Auth-only like tiebreakQuestions:
+ * it's the host's own stock, not something a room with the code should
+ * be able to read.
  *
- * The bank is a *pool* per category, not a set of pre-built rounds. A
- * category accumulates questions over time and each quiz draws a handful
- * from it, so "Geography" ends up being a year of quizzes rather than a
- * single fixed round.
+ * A category is a *pool*, not a pre-built round - it grows over time and
+ * each quiz draws a handful from it.
  */
 export interface BankQuestion {
   id: string;

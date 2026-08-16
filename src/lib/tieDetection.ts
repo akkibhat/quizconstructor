@@ -14,10 +14,9 @@ export interface TieGroup {
  * "2nd-to-last prize" badge in LeaderboardView for why last is excluded).
  * Ordinary mid-table ties are ignored, since nothing depends on them.
  *
- * `entries` must already be sorted highest-total-first (useLeaderboardTotals
- * already returns it that way). A single run of tied teams can appear as
- * both a "top" and a "second-to-last" group if the quiz has very few
- * teams and the same tie spans both - that's intentional, not a bug.
+ * `entries` must be sorted highest-first, as useLeaderboardTotals
+ * returns it. In a very small quiz one run of tied teams can come back
+ * as both a "top" and a "second-to-last" group - that's intended.
  */
 export function detectTiedPositions(entries: LeaderboardEntry[]): TieGroup[] {
   if (entries.length < 2) {

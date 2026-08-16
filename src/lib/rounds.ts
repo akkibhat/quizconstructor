@@ -100,11 +100,9 @@ export class TooFewRoundsForLongGameError extends Error {}
  * first - otherwise they'd become permanently unreachable orphans (not
  * even visible in the Firebase console's default views).
  *
- * Refuses to delete (throwing TooFewRoundsForLongGameError) if the
- * resulting round count would be less than the Long Game's current clue
- * count. This is deliberate: rather than silently guessing which clue to
- * drop, the host has to go trim The Long Game themselves first, so they
- * choose which clue goes.
+ * Throws TooFewRoundsForLongGameError if this would leave fewer rounds
+ * than the Long Game has clues - the host trims a clue themselves rather
+ * than the app guessing which one to drop.
  */
 export async function deleteRound(
   quizId: string,
