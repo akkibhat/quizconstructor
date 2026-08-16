@@ -30,7 +30,7 @@ export function RoundPresentationSection({
         <Label htmlFor="flavour">Question label</Label>
         <select
           id="flavour"
-          value={round.flavour ?? "standard"}
+          value={round.flavour}
           onChange={(event) =>
             updateRound(quizId, roundId, { flavour: event.target.value as RoundFlavour })
           }

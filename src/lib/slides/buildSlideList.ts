@@ -31,11 +31,10 @@ export function buildSlideList(
   const slides: Slide[] = [];
 
   realRounds.forEach((round, index) => {
-    // Defaulted rather than assumed present: rounds created before these
-    // fields existed won't have them, and this runs against whatever is
-    // in Firestore right now.
+    // null on the round means "not set"; the slide types want an empty
+    // list, so the conversion happens once here.
     const answerPool = round.answerPool ?? [];
-    const flavourLabel = ROUND_FLAVOUR_LABELS[round.flavour ?? "standard"];
+    const flavourLabel = ROUND_FLAVOUR_LABELS[round.flavour];
 
     slides.push({
       type: "round-title",
