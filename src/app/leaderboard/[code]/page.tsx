@@ -4,6 +4,7 @@ import { use } from "react";
 
 import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { LeaderboardView } from "@/components/LeaderboardView";
+import { ScreenFrame } from "@/components/ui/ScreenFrame";
 import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
 import { useLiveState } from "@/lib/hooks/useLiveState";
 import { useQuizByCode } from "@/lib/hooks/useQuizByCode";
@@ -43,9 +44,9 @@ export default function LeaderboardPage({ params }: { params: Promise<{ code: st
     // Same TV-set frame as the Display route - this is a second screen
     // showing the same board, so it should look like the same broadcast.
     <div className="flex min-h-screen items-center justify-center bg-backdrop p-5">
-      <div className="tv-screen flex min-h-[calc(100vh-2.5rem)] w-full items-center justify-center rounded-screen border-2 border-flame/30 p-12">
+      <ScreenFrame className="flex min-h-[calc(100vh-2.5rem)] w-full items-center justify-center p-12">
         <LeaderboardContent code={code} />
-      </div>
+      </ScreenFrame>
     </div>
   );
 }

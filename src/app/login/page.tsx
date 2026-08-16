@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Wordmark } from "@/components/ui/AppShell";
 import { Button } from "@/components/ui/Button";
 import { fieldStyles, Label } from "@/components/ui/Field";
+import { ScreenFrame } from "@/components/ui/ScreenFrame";
 import { auth } from "@/lib/firebase/client";
 
 // The only account this app ever expects is the single host account,
@@ -41,10 +42,7 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-ink-muted">Sign in to build and run your quizzes.</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="tv-screen space-y-4 rounded-screen border-2 border-flame/30 p-8"
-        >
+        <ScreenFrame as="form" onSubmit={handleSubmit} className="space-y-4 p-8">
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
             <input
@@ -80,7 +78,7 @@ export default function LoginPage() {
           <Button type="submit" variant="primary" size="lg" disabled={isSubmitting} className="w-full">
             {isSubmitting ? "Signing in…" : "Sign in"}
           </Button>
-        </form>
+        </ScreenFrame>
       </div>
     </div>
   );

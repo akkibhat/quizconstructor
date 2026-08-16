@@ -4,6 +4,7 @@ import { use } from "react";
 
 import { CodeGateLoading, CodeNotFound } from "@/components/CodeGateStatus";
 import { LeaderboardView } from "@/components/LeaderboardView";
+import { ScreenFrame } from "@/components/ui/ScreenFrame";
 import { SlideView } from "@/components/SlideView";
 import { cn } from "@/lib/cn";
 import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
@@ -152,9 +153,9 @@ export default function DisplayPage({ params }: { params: Promise<{ code: string
     // around an inset screen with a pool of light at the top. Everything
     // the room sees renders inside that frame.
     <div className="flex min-h-screen items-center justify-center bg-backdrop p-5">
-      <div className="tv-screen flex min-h-[calc(100vh-2.5rem)] w-full items-center justify-center rounded-screen border-2 border-flame/30 p-12">
+      <ScreenFrame className="flex min-h-[calc(100vh-2.5rem)] w-full items-center justify-center p-12">
         <DisplayContent code={code} />
-      </div>
+      </ScreenFrame>
     </div>
   );
 }

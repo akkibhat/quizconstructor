@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { AppShell, PageHeader } from "@/components/ui/AppShell";
+import { ScreenFrame } from "@/components/ui/ScreenFrame";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { fieldStylesCompact } from "@/components/ui/Field";
@@ -241,7 +242,7 @@ export function TiebreakPanel({
         }
       />
 
-      <div className="tv-screen mb-6 rounded-screen border-2 border-flame/30 p-8 text-center">
+      <ScreenFrame className="mb-6 p-8 text-center">
         <p className="font-display text-2xl font-semibold text-balance text-ink">
           {tiebreak.questionText}
         </p>
@@ -250,7 +251,7 @@ export function TiebreakPanel({
             Answer: {tiebreak.correctAnswer}
           </p>
         )}
-      </div>
+      </ScreenFrame>
 
       {tiebreak.mode === "app-computes" ? (
         <div className="space-y-2">

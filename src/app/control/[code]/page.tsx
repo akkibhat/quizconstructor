@@ -10,6 +10,7 @@ import { LeaderboardView } from "@/components/LeaderboardView";
 import { RequireAuth } from "@/components/RequireAuth";
 import { SlideView } from "@/components/SlideView";
 import { AppShell, PageHeader } from "@/components/ui/AppShell";
+import { ScreenFrame } from "@/components/ui/ScreenFrame";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
@@ -133,11 +134,11 @@ function ControllerContent({ code }: { code: string }) {
         }
       >
         <PageHeader eyebrow="On screen" title={quiz.title} />
-        <div className="tv-screen flex min-h-[220px] items-center justify-center rounded-screen border-2 border-flame/30 p-8">
+        <ScreenFrame className="flex min-h-[220px] items-center justify-center p-8">
           <h2 className="font-display text-4xl font-bold tracking-wide text-ink uppercase">
             Drinks Break
           </h2>
-        </div>
+        </ScreenFrame>
       </AppShell>
     );
   }
@@ -168,9 +169,9 @@ function ControllerContent({ code }: { code: string }) {
           />
         )}
 
-        <div className="tv-screen mb-6 flex justify-center rounded-screen border-2 border-flame/30 p-8">
+        <ScreenFrame className="mb-6 flex justify-center p-8">
           <LeaderboardView entries={leaderboard} revealStage={stage} />
-        </div>
+        </ScreenFrame>
 
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
@@ -248,11 +249,11 @@ function ControllerContent({ code }: { code: string }) {
 
       {/* Scaled down so the projector's real slide layout stays readable
           here without dwarfing the controls underneath it. */}
-      <div className="tv-screen mb-4 flex min-h-[260px] items-center justify-center overflow-hidden rounded-screen border-2 border-flame/30 p-8">
+      <ScreenFrame className="mb-4 flex min-h-[260px] items-center justify-center overflow-hidden p-8">
         <div className="origin-center scale-[0.55]">
           <SlideView slide={currentSlide} />
         </div>
-      </div>
+      </ScreenFrame>
 
       {currentSlide &&
         currentSlide.type === "question" &&
