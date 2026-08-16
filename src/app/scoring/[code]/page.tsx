@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipToggle } from "@/components/ui/ChipToggle";
 import { realRoundsOf } from "@/lib/types/round";
 import { use, useState } from "react";
 
@@ -58,19 +59,13 @@ function ScoringContent({ code }: { code: string }) {
 
       <div className="mb-6 flex flex-wrap gap-2">
         {realRounds.map((round) => (
-          <button
+          <ChipToggle
             key={round.id}
-            type="button"
+            selected={selectedRound?.id === round.id}
             onClick={() => setSelectedRoundId(round.id)}
-            className={cn(
-              "rounded-chip border px-3 py-1.5 text-sm transition-colors",
-              selectedRound?.id === round.id
-                ? "border-flame bg-flame font-semibold text-on-flame"
-                : "border-edge-strong text-ink-muted hover:border-flame/60 hover:text-ink-soft"
-            )}
           >
             {round.title}
-          </button>
+          </ChipToggle>
         ))}
       </div>
 

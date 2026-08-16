@@ -7,6 +7,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader, QuizCode, SectionHeading } from "@/components/ui/AppShell";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ChipToggle } from "@/components/ui/ChipToggle";
 import { fieldStyles } from "@/components/ui/Field";
 import { EmptyState, Panel } from "@/components/ui/Panel";
 import { cn } from "@/lib/cn";
@@ -93,19 +94,13 @@ function AddTeamForm({
             {realRounds.map((round) => {
               const isSelected = selectedRoundIds.includes(round.id);
               return (
-                <button
+                <ChipToggle
                   key={round.id}
-                  type="button"
+                  selected={isSelected}
                   onClick={() => toggleRound(round.id)}
-                  className={cn(
-                    "rounded-chip border px-3 py-2 text-sm transition-colors",
-                    isSelected
-                      ? "border-flame bg-flame font-semibold text-on-flame"
-                      : "border-edge-strong text-ink-soft hover:border-flame/60"
-                  )}
                 >
                   {round.title}
-                </button>
+                </ChipToggle>
               );
             })}
           </div>

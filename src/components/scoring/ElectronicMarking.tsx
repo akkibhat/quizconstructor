@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipToggle } from "@/components/ui/ChipToggle";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
@@ -157,19 +158,13 @@ export function ElectronicScoringPanel({
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
         {teams.map((team) => (
-          <button
+          <ChipToggle
             key={team.id}
-            type="button"
+            selected={selectedTeamId === team.id}
             onClick={() => setSelectedTeamId(team.id)}
-            className={cn(
-              "rounded-chip border px-3 py-1.5 text-sm transition-colors",
-              selectedTeamId === team.id
-                ? "border-flame bg-flame font-semibold text-on-flame"
-                : "border-edge-strong text-ink-muted hover:border-flame/60 hover:text-ink-soft"
-            )}
           >
             {team.name}
-          </button>
+          </ChipToggle>
         ))}
       </div>
 
