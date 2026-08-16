@@ -57,7 +57,7 @@ export function detectTiedPositions(entries: LeaderboardEntry[]): TieGroup[] {
  * order and the prize badges mean something. Until then the group is
  * still outstanding.
  */
-export function isTieGroupResolved(group: TieGroup): boolean {
+function isTieGroupResolved(group: TieGroup): boolean {
   return group.teams.every((team) => team.tiebreak !== null);
 }
 
