@@ -128,8 +128,27 @@ export function RoundPresentationSection({
         </p>
       </div>
 
-      <div className="border-t border-edge pt-4">
-        <AnswerPoolPreview questions={questions} />
+      <div className="space-y-2 border-t border-edge pt-4">
+        <label className="flex cursor-pointer items-start gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={round.usesAnswerPool}
+            onChange={(event) =>
+              updateRound(quizId, roundId, { usesAnswerPool: event.target.checked })
+            }
+            className="mt-0.5 accent-flame"
+          />
+          <span>
+            Uses an answer pool
+            <span className="mt-0.5 block text-xs text-ink-muted">
+              For rounds where the answers themselves are a shared set of values, each used once
+              (e.g. matching eight numbers to eight questions) - not most rounds, where each
+              answer is just specific to its own question.
+            </span>
+          </span>
+        </label>
+
+        {round.usesAnswerPool && <AnswerPoolPreview questions={questions} />}
       </div>
     </Panel>
   );

@@ -84,11 +84,15 @@ export interface Round {
   // it, only display it. null = nothing shown.
   themeNote: string | null;
 
-  // No answerPool field here on purpose - a round's answer pool (a fixed
-  // set of values, each used once, e.g. eight numbers where one is the
-  // answer to each question) is derived live from the questions' own
-  // answers rather than stored separately. See deriveAnswerPool in
-  // lib/answerPool.ts.
+  // Whether this round's answers are drawn from a shared pool of values,
+  // each used once (e.g. eight numbers where one is the answer to each
+  // question) - as opposed to the normal case where every answer is its
+  // own thing, specific to its question. Off by default: most rounds
+  // (including every flavour except a plain numbers-style standard round)
+  // have nothing to pool. The pool's actual contents are never stored -
+  // see deriveAnswerPool in lib/answerPool.ts - this flag only controls
+  // whether that derived pool gets shown at all.
+  usesAnswerPool: boolean;
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -105,6 +109,7 @@ export function normaliseRound(id: string, data: DocumentData): Round {
     listAnswerReference: round.listAnswerReference ?? null,
     flavour: round.flavour ?? "standard",
     themeNote: round.themeNote ?? null,
+    usesAnswerPool: round.usesAnswerPool ?? false,
   };
 }
 
@@ -124,6 +129,7 @@ export function newRoundFields(fields: {
   listAnswerReference?: string[] | null;
   flavour?: RoundFlavour;
   themeNote?: string | null;
+  usesAnswerPool?: boolean;
 }) {
   return {
     order: fields.order,
@@ -134,6 +140,7 @@ export function newRoundFields(fields: {
     listAnswerReference: fields.listAnswerReference ?? null,
     flavour: fields.flavour ?? "standard",
     themeNote: fields.themeNote ?? null,
+    usesAnswerPool: fields.usesAnswerPool ?? false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };

@@ -34,10 +34,13 @@ export function buildSlideList(
 
   realRounds.forEach((round, index) => {
     // Derived from the round's own questions rather than a stored field -
-    // see deriveAnswerPool. Empty for a Gauntlet round, which has no
-    // per-question answers to derive from - that's correct, the pool
-    // concept doesn't apply there.
-    const answerPool = deriveAnswerPool(questionsByRound[round.id] ?? []);
+    // see deriveAnswerPool - but only shown at all when the round opts in
+    // via usesAnswerPool. Most rounds' answers are specific to their own
+    // question and have nothing to pool; only rounds where the answers are
+    // themselves the pool (e.g. matching numbers to questions) need it.
+    const answerPool = round.usesAnswerPool
+      ? deriveAnswerPool(questionsByRound[round.id] ?? [])
+      : [];
     const flavourLabel = ROUND_FLAVOUR_LABELS[round.flavour];
 
     slides.push({
