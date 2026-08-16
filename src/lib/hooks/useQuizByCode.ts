@@ -1,60 +1,44 @@
 "use client";
 
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 import { db } from "@/lib/firebase/client";
+import { useDocumentData } from "@/lib/hooks/useFirestore";
 import type { Quiz } from "@/lib/types/quiz";
 
 /**
- * Resolves a short quiz code (e.g. "BRXK") to its quiz document and keeps
- * it live. This is what every code-gated route (Team Setup, Controller,
- * Scoring, Display, Leaderboard) uses to go from "code in the URL" to
- * "quiz data" - see useQuiz.ts for the admin-side equivalent that looks up
- * by Firestore document ID instead.
+ * Resolves a short quiz code ("BRXK") to its quiz, and keeps the quiz
+ * live. Every code-gated route uses this; useQuiz is the admin-side
+ * equivalent that looks up by document ID.
  *
- * The code -> quizId mapping in quizCodes is immutable once created (see
- * firestore.rules), so that half only needs a one-time lookup; the quiz
- * document itself is subscribed to normally so quiz-level changes (like
- * `status` flipping to "live") show up without a refresh.
+ * The code -> quizId mapping is immutable once written (see
+ * firestore.rules), so that half is a one-time fetch. Only the quiz
+ * itself is subscribed to, so changes like `status` flipping to "live"
+ * arrive without a refresh.
  *
- * undefined = still resolving, null = code doesn't match any quiz.
+ * undefined = still resolving, null = no quiz for that code.
  */
 export function useQuizByCode(code: string | undefined): Quiz | null | undefined {
-  const [quiz, setQuiz] = useState<Quiz | null | undefined>(undefined);
+  const [quizId, setQuizId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
-    if (!code) {
-      return;
-    }
-
-    let unsubscribeFromQuiz: (() => void) | undefined;
+    if (!code) return;
     let cancelled = false;
 
-    (async () => {
-      const codeDoc = await getDoc(doc(db, "quizCodes", code.toUpperCase()));
+    getDoc(doc(db, "quizCodes", code.toUpperCase())).then((codeDoc) => {
       if (cancelled) return;
-
-      if (!codeDoc.exists()) {
-        setQuiz(null);
-        return;
-      }
-
-      const quizId = codeDoc.data().quizId as string;
-      unsubscribeFromQuiz = onSnapshot(doc(db, "quizzes", quizId), (snapshot) => {
-        if (!snapshot.exists()) {
-          setQuiz(null);
-          return;
-        }
-        setQuiz({ id: snapshot.id, ...(snapshot.data() as Omit<Quiz, "id">) });
-      });
-    })();
+      setQuizId(codeDoc.exists() ? (codeDoc.data().quizId as string) : null);
+    });
 
     return () => {
       cancelled = true;
-      unsubscribeFromQuiz?.();
     };
   }, [code]);
 
-  return quiz;
+  const quiz = useDocumentData<Quiz>(quizId ? ["quizzes", quizId] : null);
+
+  // A code that matched nothing is a definite "no quiz", not a wait -
+  // without this the route would sit on its loading state forever.
+  return quizId === null ? null : quiz;
 }

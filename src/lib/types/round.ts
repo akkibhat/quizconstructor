@@ -1,4 +1,4 @@
-import type { Timestamp } from "firebase/firestore";
+import type { DocumentData, Timestamp } from "firebase/firestore";
 
 // "standard" is a normal round built from Question docs. "list" is The
 // Gauntlet - a single-prompt round ("name any 10 of the top 25 busiest
@@ -120,4 +120,19 @@ export interface Round {
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/** Fills in fields older round documents predate - see normaliseQuestion. */
+export function normaliseRound(id: string, data: DocumentData): Round {
+  const round = data as Omit<Round, "id">;
+  return {
+    ...round,
+    id,
+    roundType: round.roundType ?? "standard",
+    listPrompt: round.listPrompt ?? null,
+    listAnswerReference: round.listAnswerReference ?? null,
+    flavour: round.flavour ?? "standard",
+    themeNote: round.themeNote ?? null,
+    answerPool: round.answerPool ?? null,
+  };
 }

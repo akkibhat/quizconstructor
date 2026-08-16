@@ -4,17 +4,15 @@ import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 import { db } from "@/lib/firebase/client";
-import type { Question } from "@/lib/types/question";
+import { normaliseQuestion, type Question } from "@/lib/types/question";
 
 /**
- * Subscribes to several rounds' questions at once, keyed by roundId.
- * Exists because useQuestions.ts is for one round at a time (what the
- * round editor page needs); the presenter's slide list needs every real
- * round's questions simultaneously, and React hooks can't be called in a
- * loop to get there.
+ * Several rounds' questions at once, keyed by roundId.
  *
- * undefined until every round has reported at least one snapshot, so
- * consumers never see a partially-populated map.
+ * Separate from useQuestions because that one covers a single round (what
+ * the round editor needs) and hooks can't be called in a loop to cover
+ * many. Stays undefined until every round has reported, so callers never
+ * see a half-filled map and build a slide list missing whole rounds.
  */
 export function useQuestionsByRound(
   quizId: string | undefined,
@@ -24,40 +22,34 @@ export function useQuestionsByRound(
     undefined
   );
 
-  // Joined into a stable string so the effect only re-runs when the actual
-  // set of round IDs changes, not on every render (roundIds is a fresh
-  // array reference each time otherwise).
+  // Joined so the effect re-runs on a genuine change of rounds rather
+  // than on every render, since roundIds is a fresh array each time.
   const roundIdsKey = roundIds.join(",");
 
   useEffect(() => {
-    if (!quizId || roundIds.length === 0) {
-      return;
-    }
+    if (!quizId || !roundIdsKey) return;
 
-    const result: Record<string, Question[]> = {};
+    const ids = roundIdsKey.split(",");
+    const collected: Record<string, Question[]> = {};
     const reported = new Set<string>();
 
-    const unsubscribes = roundIds.map((roundId) =>
+    const unsubscribes = ids.map((roundId) =>
       onSnapshot(
         query(
           collection(db, "quizzes", quizId, "rounds", roundId, "questions"),
           orderBy("order", "asc")
         ),
         (snapshot) => {
-          result[roundId] = snapshot.docs.map((docSnapshot) => ({
-            id: docSnapshot.id,
-            ...(docSnapshot.data() as Omit<Question, "id">),
-          }));
+          collected[roundId] = snapshot.docs.map((d) => normaliseQuestion(d.id, d.data()));
           reported.add(roundId);
-          if (reported.size === roundIds.length) {
-            setQuestionsByRound({ ...result });
+          if (reported.size === ids.length) {
+            setQuestionsByRound({ ...collected });
           }
         }
       )
     );
 
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- roundIdsKey stands in for roundIds
   }, [quizId, roundIdsKey]);
 
   return questionsByRound;

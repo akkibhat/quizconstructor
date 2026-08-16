@@ -1,4 +1,4 @@
-import type { Timestamp } from "firebase/firestore";
+import type { DocumentData, Timestamp } from "firebase/firestore";
 
 // How a question's attached audio behaves once its slide becomes current.
 // "autoplay" is for generic background-clue music that should just start
@@ -53,4 +53,21 @@ export interface Question {
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/**
+ * Fills in fields that questions written before those fields existed
+ * won't have. Every path that reads a question document goes through
+ * here, because Firestore rejects a write containing `undefined` - a
+ * missing field read from an old document and saved straight back would
+ * fail the whole write.
+ */
+export function normaliseQuestion(id: string, data: DocumentData): Question {
+  const question = data as Omit<Question, "id">;
+  return {
+    ...question,
+    id,
+    points: question.points ?? 1,
+    options: question.options ?? null,
+  };
 }

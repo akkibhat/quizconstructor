@@ -1,51 +1,25 @@
 "use client";
 
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { orderBy, where } from "firebase/firestore";
 
-import { db } from "@/lib/firebase/client";
+import { useCollectionList } from "@/lib/hooks/useFirestore";
 import type { Quiz } from "@/lib/types/quiz";
 
 /**
- * Realtime list of a host's own quizzes for the "my quizzes" admin page.
- * Archived quizzes are filtered out - see Quiz.archived for why archiving
- * (not deleting) is how quizzes get removed from this list.
+ * A host's own quizzes, newest first. undefined = still loading, so the
+ * dashboard can tell that apart from "genuinely has none yet".
  *
- * Returns undefined while the first snapshot hasn't arrived yet, so the UI
- * can distinguish "still loading" from "genuinely has zero quizzes".
+ * Archived quizzes are excluded - archiving, not deleting, is how a quiz
+ * leaves this list (see Quiz.archived). `hostUid` is passed as a dep
+ * because it sits inside a where clause rather than in the path.
  */
 export function useQuizzes(hostUid: string | undefined): Quiz[] | undefined {
-  const [quizzes, setQuizzes] = useState<Quiz[] | undefined>(undefined);
-
-  useEffect(() => {
-    // No signed-in host yet - nothing to subscribe to. Initial state is
-    // already `undefined`, so there's nothing to reset here.
-    if (!hostUid) {
-      return;
-    }
-
-    const quizzesQuery = query(
-      collection(db, "quizzes"),
+  return useCollectionList<Quiz>(hostUid ? ["quizzes"] : null, {
+    constraints: [
       where("hostUid", "==", hostUid),
       where("archived", "==", false),
-      orderBy("createdAt", "desc")
-    );
-
-    return onSnapshot(quizzesQuery, (snapshot) => {
-      setQuizzes(
-        snapshot.docs.map((docSnapshot) => ({
-          id: docSnapshot.id,
-          ...(docSnapshot.data() as Omit<Quiz, "id">),
-        }))
-      );
-    });
-  }, [hostUid]);
-
-  return quizzes;
+      orderBy("createdAt", "desc"),
+    ],
+    deps: [hostUid],
+  });
 }
