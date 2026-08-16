@@ -8,19 +8,26 @@ import { Panel } from "@/components/ui/Panel";
 import { cn } from "@/lib/cn";
 import { useBankQuestions } from "@/lib/hooks/useBankQuestions";
 import { categoriesOf, insertBankQuestionsIntoRound, pickRandom, saveRoundQuestionsToBank } from "@/lib/questionBank";
+import { ROUND_FLAVOUR_INFO } from "@/lib/roundFlavourLabels";
 import type { Question } from "@/lib/types/question";
+import type { RoundFlavour } from "@/lib/types/round";
 
 export function BankSection({
   quizId,
   quizTitle,
   roundId,
   questions,
+  flavour,
 }: {
   quizId: string;
   quizTitle: string;
   roundId: string;
   questions: Question[];
+  flavour: RoundFlavour;
 }) {
+  // Bank questions carry no options field at all, same gap as the TSV
+  // importer - only worth flagging for flavours that actually use options.
+  const needsOptions = ROUND_FLAVOUR_INFO[flavour].fields.options !== "none";
   const bank = useBankQuestions();
   const [category, setCategory] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -173,6 +180,13 @@ export function BankSection({
                 );
               })}
             </ul>
+
+            {needsOptions && selected.length > 0 && (
+              <p className="rounded-chip border border-flame/40 bg-flame/8 px-3 py-2 text-xs text-flame">
+                The bank doesn&apos;t store options, so these will land as plain open questions -
+                add options to each afterward in the list below.
+              </p>
+            )}
 
             <Button
               variant="primary"

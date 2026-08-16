@@ -7,19 +7,28 @@ import { fieldStyles, fileInputStyles } from "@/components/ui/Field";
 import { Panel } from "@/components/ui/Panel";
 import { cn } from "@/lib/cn";
 import { exportQuestionsToTsv, importQuestions, parseQuestionsText } from "@/lib/questionsImportExport";
+import { ROUND_FLAVOUR_INFO } from "@/lib/roundFlavourLabels";
 import type { Question } from "@/lib/types/question";
+import type { RoundFlavour } from "@/lib/types/round";
 
 export function ImportExportSection({
   quizId,
   roundId,
   roundTitle,
   questions,
+  flavour,
 }: {
   quizId: string;
   roundId: string;
   roundTitle: string;
   questions: Question[];
+  flavour: RoundFlavour;
 }) {
+  // The format is Question/Answer/Points only - it has no column for
+  // options, so a batch always lands as plain open questions. Only worth
+  // flagging for flavours that actually use options; a Picture This or
+  // standard round wouldn't miss what it never wanted.
+  const needsOptions = ROUND_FLAVOUR_INFO[flavour].fields.options !== "none";
   const [pasteText, setPasteText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -77,6 +86,12 @@ export function ImportExportSection({
         pipe (if typing by hand). Always adds to this round&apos;s existing questions, never
         replaces them.
       </p>
+      {needsOptions && (
+        <p className="mb-3 rounded-chip border border-flame/40 bg-flame/8 px-3 py-2 text-xs text-flame">
+          This format has no column for options, so imported questions land as plain open ones -
+          add options to each afterward in the list below.
+        </p>
+      )}
       <textarea
         value={pasteText}
         onChange={(event) => setPasteText(event.target.value)}

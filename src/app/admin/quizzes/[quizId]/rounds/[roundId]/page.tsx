@@ -93,12 +93,14 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
             quizTitle={quiz.title}
             roundId={roundId}
             questions={questions}
+            flavour={round.flavour}
           />
           <ImportExportSection
             quizId={quizId}
             roundId={roundId}
             roundTitle={round.title}
             questions={questions}
+            flavour={round.flavour}
           />
         </>
       )}
