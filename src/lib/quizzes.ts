@@ -13,7 +13,7 @@ import {
 import { generateQuizCode } from "@/lib/codeGen";
 import { db } from "@/lib/firebase/client";
 import { newQuestionFields, normaliseQuestion, type Question } from "@/lib/types/question";
-import { normaliseRound } from "@/lib/types/round";
+import { newRoundFields, normaliseRound } from "@/lib/types/round";
 
 export interface CreateQuizInput {
   title: string;
@@ -102,21 +102,9 @@ export async function createQuiz(
     const batch = writeBatch(db);
     for (let i = 0; i < input.numRounds; i++) {
       const roundRef = doc(collection(db, "quizzes", quizRef.id, "rounds"));
-      batch.set(roundRef, {
-        // Gapped values (10, 20, 30, ...) so later reordering only ever
-        // has to touch the 1-2 rounds a drag moved past.
-        order: (i + 1) * 10,
-        title: `Round ${i + 1}`,
-        isLongGame: false,
-        roundType: "standard",
-        listPrompt: null,
-        listAnswerReference: null,
-        flavour: "standard",
-        themeNote: null,
-        answerPool: null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      // Gapped values (10, 20, 30, ...) so later reordering only ever
+      // has to touch the 1-2 rounds a drag moved past.
+      batch.set(roundRef, newRoundFields({ order: (i + 1) * 10, title: `Round ${i + 1}` }));
     }
 
     if (input.longGameEnabled) {
@@ -127,19 +115,10 @@ export async function createQuiz(
       // exactly numRounds empty clue slots to match, same as the real
       // rounds above.
       const longGameRoundRef = doc(collection(db, "quizzes", quizRef.id, "rounds"));
-      batch.set(longGameRoundRef, {
-        order: 0,
-        title: "The Long Game",
-        isLongGame: true,
-        roundType: "standard",
-        listPrompt: null,
-        listAnswerReference: null,
-        flavour: "standard",
-        themeNote: null,
-        answerPool: null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      batch.set(
+        longGameRoundRef,
+        newRoundFields({ order: 0, title: "The Long Game", isLongGame: true })
+      );
 
       for (let i = 0; i < input.numRounds; i++) {
         const clueRef = doc(
@@ -248,19 +227,7 @@ export async function duplicateQuiz(
     const batch = writeBatch(db);
     for (const round of sourceRounds) {
       const newRoundRef = doc(collection(db, "quizzes", newQuizRef.id, "rounds"));
-      batch.set(newRoundRef, {
-        order: round.order,
-        title: round.title,
-        isLongGame: round.isLongGame,
-        roundType: round.roundType,
-        listPrompt: round.listPrompt,
-        listAnswerReference: round.listAnswerReference,
-        flavour: round.flavour,
-        themeNote: round.themeNote,
-        answerPool: round.answerPool,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      batch.set(newRoundRef, newRoundFields(round));
 
       for (const question of questionsByRoundId[round.id] ?? []) {
         const newQuestionRef = doc(

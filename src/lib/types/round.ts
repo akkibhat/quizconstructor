@@ -1,4 +1,4 @@
-import type { DocumentData, Timestamp } from "firebase/firestore";
+import { serverTimestamp, type DocumentData, type Timestamp } from "firebase/firestore";
 
 // "standard" is a normal round of questions. "list" is The Gauntlet: one
 // shared prompt ("name any 10 of the top 25 busiest airports"), scored on
@@ -122,5 +122,38 @@ export function normaliseRound(id: string, data: DocumentData): Round {
     flavour: round.flavour ?? "standard",
     themeNote: round.themeNote ?? null,
     answerPool: round.answerPool ?? null,
+  };
+}
+
+/**
+ * The complete field set for a new round document. Four places create
+ * rounds - Add Round, Add The Gauntlet, and both halves of quiz
+ * scaffolding - and each spelled the whole shape out, which is how the
+ * scaffolding sites ended up missing three fields. Anything omitted here
+ * gets the default a plain round starts with.
+ */
+export function newRoundFields(fields: {
+  order: number;
+  title: string;
+  isLongGame?: boolean;
+  roundType?: RoundType;
+  listPrompt?: string | null;
+  listAnswerReference?: string[] | null;
+  flavour?: RoundFlavour;
+  themeNote?: string | null;
+  answerPool?: string[] | null;
+}) {
+  return {
+    order: fields.order,
+    title: fields.title,
+    isLongGame: fields.isLongGame ?? false,
+    roundType: fields.roundType ?? "standard",
+    listPrompt: fields.listPrompt ?? null,
+    listAnswerReference: fields.listAnswerReference ?? null,
+    flavour: fields.flavour ?? "standard",
+    themeNote: fields.themeNote ?? null,
+    answerPool: fields.answerPool ?? null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
 }

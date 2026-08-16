@@ -8,7 +8,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/client";
-import type { Round } from "@/lib/types/round";
+import { newRoundFields, type Round } from "@/lib/types/round";
 
 /** Adds a new standard round at the end of the quiz's round list. */
 export async function addRound(quizId: string, existingRounds: Round[]): Promise<void> {
@@ -16,19 +16,10 @@ export async function addRound(quizId: string, existingRounds: Round[]): Promise
   const roundRef = doc(collection(db, "quizzes", quizId, "rounds"));
 
   const batch = writeBatch(db);
-  batch.set(roundRef, {
-    order: highestOrder + 10,
-    title: `Round ${existingRounds.length + 1}`,
-    isLongGame: false,
-    roundType: "standard",
-    listPrompt: null,
-    listAnswerReference: null,
-    flavour: "standard",
-    themeNote: null,
-    answerPool: null,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  batch.set(
+    roundRef,
+    newRoundFields({ order: highestOrder + 10, title: `Round ${existingRounds.length + 1}` })
+  );
   batch.update(doc(db, "quizzes", quizId), {
     numRounds: existingRounds.length + 1,
     updatedAt: serverTimestamp(),
@@ -55,19 +46,10 @@ export async function addListRound(quizId: string, existingRounds: Round[]): Pro
   const roundRef = doc(collection(db, "quizzes", quizId, "rounds"));
 
   const batch = writeBatch(db);
-  batch.set(roundRef, {
-    order: highestOrder + 10,
-    title: "The Gauntlet",
-    isLongGame: false,
-    roundType: "list",
-    listPrompt: null,
-    listAnswerReference: null,
-    flavour: "standard",
-    themeNote: null,
-    answerPool: null,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  batch.set(
+    roundRef,
+    newRoundFields({ order: highestOrder + 10, title: "The Gauntlet", roundType: "list" })
+  );
   batch.update(doc(db, "quizzes", quizId), {
     numRounds: existingRounds.length + 1,
     updatedAt: serverTimestamp(),
