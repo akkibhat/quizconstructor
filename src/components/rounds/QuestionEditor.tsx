@@ -10,7 +10,7 @@ import { Panel } from "@/components/ui/Panel";
 import { ParsedListField } from "@/components/ui/ParsedListField";
 import { cn } from "@/lib/cn";
 import { uploadQuestionAudio, uploadQuestionImage } from "@/lib/media";
-import { deleteQuestion, swapQuestionOrder, updateQuestion } from "@/lib/questions";
+import { deleteQuestion, duplicateQuestion, swapQuestionOrder, updateQuestion } from "@/lib/questions";
 import { ROUND_FLAVOUR_INFO } from "@/lib/roundFlavourLabels";
 import type { AudioPlayMode, Question } from "@/lib/types/question";
 import type { RoundFlavour } from "@/lib/types/round";
@@ -156,6 +156,12 @@ export function QuestionEditor({
             aria-label="Move down"
           >
             ↓
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => duplicateQuestion(quizId, roundId, questions, question)}
+          >
+            Duplicate
           </Button>
           <Button
             variant="danger"
