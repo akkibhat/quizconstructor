@@ -5,7 +5,7 @@ import { fieldStyles, Label } from "@/components/ui/Field";
 import { Panel } from "@/components/ui/Panel";
 import { deriveAnswerPool, duplicateAnswers } from "@/lib/answerPool";
 import { updateRound } from "@/lib/rounds";
-import { ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
+import { ROUND_FLAVOUR_LABELS, ROUND_LOCKABLE_FLAVOURS } from "@/lib/roundFlavourLabels";
 import type { Question } from "@/lib/types/question";
 import { type Round, type RoundFlavour } from "@/lib/types/round";
 
@@ -90,7 +90,7 @@ export function RoundPresentationSection({
       </h3>
 
       <div className="space-y-1.5">
-        <Label htmlFor="flavour">Question label</Label>
+        <Label htmlFor="flavour">Round type</Label>
         <select
           id="flavour"
           value={round.flavour}
@@ -99,16 +99,16 @@ export function RoundPresentationSection({
           }
           className={fieldStyles}
         >
-          {(Object.keys(ROUND_FLAVOUR_LABELS) as RoundFlavour[]).map((flavour) => (
+          {ROUND_LOCKABLE_FLAVOURS.map((flavour) => (
             <option key={flavour} value={flavour}>
               {ROUND_FLAVOUR_LABELS[flavour]}
             </option>
           ))}
         </select>
         <p className="text-xs text-ink-muted">
-          Sets what&apos;s shown above each question on the projector, and which fields the
-          question editor below shows - it doesn&apos;t change scoring or the slide order. See
-          the Round types panel for what each one means.
+          {round.flavour === "standard"
+            ? "Standard keeps this round mixed - each question below picks its own type. Choose one of the other options here only to lock every question in this round to the same type."
+            : "Every question in this round is locked to this type - switch back to Standard to mix question types instead."}
         </p>
       </div>
 

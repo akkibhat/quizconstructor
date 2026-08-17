@@ -16,19 +16,21 @@ export function ImportExportSection({
   roundId,
   roundTitle,
   questions,
-  flavour,
+  roundFlavour,
 }: {
   quizId: string;
   roundId: string;
   roundTitle: string;
   questions: Question[];
-  flavour: RoundFlavour;
+  roundFlavour: RoundFlavour;
 }) {
   // The format is Question/Answer/Points only - it has no column for
   // options, so a batch always lands as plain open questions. Only worth
-  // flagging for flavours that actually use options; a Picture This or
-  // standard round wouldn't miss what it never wanted.
-  const needsOptions = ROUND_FLAVOUR_INFO[flavour].fields.options !== "none";
+  // flagging for a round locked to a flavour that actually uses options;
+  // a "standard"/mixed round can't know per-question yet from this prop
+  // alone, so it gets no warning here (each question's own type governs
+  // whether it ends up needing options, same as always).
+  const needsOptions = ROUND_FLAVOUR_INFO[roundFlavour].fields.options !== "none";
   const [pasteText, setPasteText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);

@@ -11,7 +11,7 @@ import { ParsedListField } from "@/components/ui/ParsedListField";
 import { cn } from "@/lib/cn";
 import { uploadQuestionAudio, uploadQuestionImage } from "@/lib/media";
 import { deleteQuestion, duplicateQuestion, swapQuestionOrder, updateQuestion } from "@/lib/questions";
-import { ROUND_FLAVOUR_INFO } from "@/lib/roundFlavourLabels";
+import { ROUND_FLAVOUR_INFO, ROUND_FLAVOUR_LABELS, QUESTION_FLAVOURS } from "@/lib/roundFlavourLabels";
 import type { AudioPlayMode, Question } from "@/lib/types/question";
 import type { RoundFlavour } from "@/lib/types/round";
 
@@ -84,7 +84,7 @@ export function QuestionEditor({
   quizId,
   roundId,
   isLongGame,
-  flavour,
+  roundFlavour,
   confirmDialog,
 }: {
   question: Question;
@@ -95,10 +95,17 @@ export function QuestionEditor({
   isLongGame: boolean;
   // Only meaningful when !isLongGame - Long Game clues don't go through
   // the flavour system, they always get the plain text+image fields.
-  flavour: RoundFlavour;
+  roundFlavour: RoundFlavour;
   confirmDialog: (message: string) => Promise<boolean>;
 }) {
   const [uploading, setUploading] = useState(false);
+  // A round locked to anything but "standard" overrides every question in
+  // it uniformly (unchanged from before this field existed). A "standard"
+  // round is mixed - each question picks its own type below. See
+  // effectiveFlavour in lib/roundFlavourLabels.ts, which this mirrors
+  // without needing the whole Round object passed down just for this.
+  const isMixed = roundFlavour === "standard";
+  const flavour = isMixed ? question.flavour : roundFlavour;
   const info = ROUND_FLAVOUR_INFO[flavour];
 
   async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -176,6 +183,30 @@ export function QuestionEditor({
           </Button>
         </div>
       </div>
+
+      {!isLongGame && isMixed && (
+        <select
+          value={question.flavour}
+          onChange={(event) => {
+            const nextFlavour = event.target.value as RoundFlavour;
+            const nextInfo = ROUND_FLAVOUR_INFO[nextFlavour];
+            updateQuestion(quizId, roundId, question.id, {
+              flavour: nextFlavour,
+              // Switching away from a flavour that used options clears
+              // them - stale options rarely make sense once relabelled.
+              options: nextInfo.fields.options === "none" ? null : question.options,
+            });
+          }}
+          className={cn(fieldStylesCompact, "w-44")}
+          aria-label="Question type"
+        >
+          {QUESTION_FLAVOURS.map((f) => (
+            <option key={f} value={f}>
+              {ROUND_FLAVOUR_LABELS[f]}
+            </option>
+          ))}
+        </select>
+      )}
 
       <textarea
         defaultValue={question.text}

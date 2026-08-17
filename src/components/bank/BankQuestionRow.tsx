@@ -60,10 +60,18 @@ export function BankQuestionRow({
       <div className="flex flex-wrap items-center gap-2">
         <input
           list="bank-categories"
-          defaultValue={question.category}
-          onBlur={(event) => updateBankQuestion(question.id, { category: event.target.value })}
-          className={cn(fieldStylesCompact, "w-40")}
-          aria-label="Category"
+          defaultValue={question.categories.join(", ")}
+          placeholder="Categories, comma separated"
+          onBlur={(event) =>
+            updateBankQuestion(question.id, {
+              categories: event.target.value
+                .split(",")
+                .map((c) => c.trim())
+                .filter((c) => c.length > 0),
+            })
+          }
+          className={cn(fieldStylesCompact, "w-56")}
+          aria-label="Categories"
         />
         <datalist id="bank-categories">
           {categories.map((category) => (

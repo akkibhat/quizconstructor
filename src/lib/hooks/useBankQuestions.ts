@@ -27,7 +27,7 @@ export function useBankQuestions(): BankQuestion[] | undefined {
         ?.slice()
         .sort(
           (a, b) =>
-            a.category.localeCompare(b.category) ||
+            (a.categories[0] ?? "").localeCompare(b.categories[0] ?? "") ||
             (a.createdAt?.toMillis() ?? 0) - (b.createdAt?.toMillis() ?? 0)
         ),
     [questions]

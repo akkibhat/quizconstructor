@@ -1,5 +1,7 @@
 import { serverTimestamp, type DocumentData, type Timestamp } from "firebase/firestore";
 
+import type { RoundFlavour } from "@/lib/types/round";
+
 // How a question's attached audio behaves once its slide becomes current.
 // "autoplay" is for generic background-clue music that should just start
 // playing; "manual" is for "name that tune" / "guess the lyrics" style
@@ -23,6 +25,18 @@ export interface Question {
 
   text: string;
   answer: string;
+
+  // This question's own type, independent of its round's - what lets a
+  // "standard" round mix a plain question, a True/False, a Multiple
+  // Choice, an Odd One Out and a Finish the Lyric all in the same list.
+  // Only consulted when the round's own `flavour` is "standard": a round
+  // locked to e.g. "true-false" overrides every question in it uniformly,
+  // same as before this field existed - see effectiveFlavour in
+  // lib/roundFlavourLabels.ts, which is the one place that should ever
+  // need to read both this and the round together. Never "picture-this" -
+  // that flavour only makes sense as a whole dedicated round, never mixed
+  // in among other question types.
+  flavour: RoundFlavour;
 
   // How many points this question is worth when fully correct - almost
   // always 1, but editable for the occasional multi-part question (e.g. a
@@ -65,6 +79,7 @@ export function normaliseQuestion(id: string, data: DocumentData): Question {
     id,
     points: question.points ?? 1,
     options: question.options ?? null,
+    flavour: question.flavour ?? "standard",
   };
 }
 
@@ -85,6 +100,7 @@ export function newQuestionFields(fields: {
   imagePath?: string | null;
   audioPath?: string | null;
   audioPlayMode?: AudioPlayMode;
+  flavour?: RoundFlavour;
 }) {
   return {
     order: fields.order,
@@ -95,6 +111,7 @@ export function newQuestionFields(fields: {
     imagePath: fields.imagePath ?? null,
     audioPath: fields.audioPath ?? null,
     audioPlayMode: fields.audioPlayMode ?? null,
+    flavour: fields.flavour ?? "standard",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };

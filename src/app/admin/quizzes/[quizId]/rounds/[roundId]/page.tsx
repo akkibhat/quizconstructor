@@ -101,15 +101,15 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
                 quizId={quizId}
                 quizTitle={quiz.title}
                 roundId={roundId}
+                round={round}
                 questions={questions}
-                flavour={round.flavour}
               />
               <ImportExportSection
                 quizId={quizId}
                 roundId={roundId}
                 roundTitle={round.title}
                 questions={questions}
-                flavour={round.flavour}
+                roundFlavour={round.flavour}
               />
             </>
           )}
@@ -152,7 +152,7 @@ function RoundEditor({ quizId, roundId }: { quizId: string; roundId: string }) {
                   quizId={quizId}
                   roundId={roundId}
                   isLongGame={isLongGame}
-                  flavour={round.flavour}
+                  roundFlavour={round.flavour}
                   confirmDialog={confirmDialog}
                 />
               ))}

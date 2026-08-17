@@ -1,4 +1,5 @@
-import type { RoundFlavour } from "@/lib/types/round";
+import type { Question } from "@/lib/types/question";
+import type { Round, RoundFlavour } from "@/lib/types/round";
 
 /**
  * What each RoundFlavour is called on screen - the round editor's
@@ -15,6 +16,55 @@ export const ROUND_FLAVOUR_LABELS: Record<RoundFlavour, string> = {
   "picture-this": "Picture This",
   "close-up": "Close-Up",
 };
+
+/**
+ * The values `Round.flavour` can actually be set to. Restricted to the
+ * ones that change something about the WHOLE round when locked in - a
+ * dedicated all-True/False round, an all-Odd-One-Out round, a Picture
+ * round with no text questions, an all-Close-Up round. "standard" is the
+ * default/mixed case: a round left here can freely mix question types,
+ * each one tagged via Question.flavour instead (see QUESTION_FLAVOURS).
+ *
+ * Multiple Choice and Finish the Lyric are deliberately excluded here -
+ * neither ever needs to lock an entire round, they only ever apply
+ * per-question (any round can have a multiple-choice question dropped
+ * into it; Finish the Lyric usually sits inside a music round without
+ * needing the whole round declared that way).
+ */
+export const ROUND_LOCKABLE_FLAVOURS: RoundFlavour[] = [
+  "standard",
+  "true-false",
+  "odd-one-out",
+  "picture-this",
+  "close-up",
+];
+
+/**
+ * The values an individual Question's own `flavour` can be, inside a
+ * "standard" (mixed) round - see Question.flavour. Excludes "picture-this"
+ * on purpose: that one only makes sense as a whole dedicated round (see
+ * ROUND_LOCKABLE_FLAVOURS), never scattered among other question types.
+ */
+export const QUESTION_FLAVOURS: RoundFlavour[] = [
+  "standard",
+  "true-false",
+  "multiple-choice",
+  "odd-one-out",
+  "finish-the-lyric",
+  "close-up",
+];
+
+/**
+ * The flavour that actually governs how a given question renders and
+ * what fields its editor shows. A round locked to anything other than
+ * "standard" overrides every question in it uniformly (the original,
+ * simpler behaviour, unchanged); a "standard" round defers to each
+ * question's own flavour instead, which is what lets one round mix
+ * question types freely.
+ */
+export function effectiveFlavour(round: Round, question: Question): RoundFlavour {
+  return round.flavour === "standard" ? question.flavour : round.flavour;
+}
 
 /** How a flavour wants its options field handled in the editor. */
 export type OptionsMode =

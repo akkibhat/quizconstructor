@@ -29,7 +29,14 @@ export async function updateQuestion(
   updates: Partial<
     Pick<
       Question,
-      "text" | "answer" | "points" | "options" | "imagePath" | "audioPath" | "audioPlayMode"
+      | "text"
+      | "answer"
+      | "points"
+      | "options"
+      | "imagePath"
+      | "audioPath"
+      | "audioPlayMode"
+      | "flavour"
     >
   >
 ): Promise<void> {
@@ -74,6 +81,7 @@ export async function duplicateQuestion(
         imagePath: question.imagePath,
         audioPath: question.audioPath,
         audioPlayMode: question.audioPlayMode,
+        flavour: question.flavour,
       })
     )
     .commit();

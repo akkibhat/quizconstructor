@@ -4,8 +4,23 @@ import { useState } from "react";
 
 import { Panel } from "@/components/ui/Panel";
 import { cn } from "@/lib/cn";
-import { ROUND_FLAVOUR_INFO, ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
+import {
+  ROUND_FLAVOUR_INFO,
+  ROUND_FLAVOUR_LABELS,
+  ROUND_LOCKABLE_FLAVOURS,
+  QUESTION_FLAVOURS,
+} from "@/lib/roundFlavourLabels";
 import { type RoundFlavour } from "@/lib/types/round";
+
+/** "Whole round only", "Any question", or "Both" - which axis a flavour applies on. */
+function scopeLabel(flavour: RoundFlavour): string {
+  const canLockRound = ROUND_LOCKABLE_FLAVOURS.includes(flavour) && flavour !== "standard";
+  const canBeAnyQuestion = QUESTION_FLAVOURS.includes(flavour) && flavour !== "standard";
+  if (canLockRound && canBeAnyQuestion) return "Whole round, or any question";
+  if (canLockRound) return "Whole round only";
+  if (canBeAnyQuestion) return "Any question, in a standard round";
+  return "Default";
+}
 
 /**
  * A sticky sidebar reference: every flavour, each individually
@@ -83,6 +98,10 @@ export function RoundFlavourReference({ selected }: { selected: RoundFlavour }) 
                   <div>
                     <dt className="font-semibold text-ink-soft">On the projector</dt>
                     <dd className="mt-0.5 text-ink-muted">{info.projector}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-ink-soft">Where it applies</dt>
+                    <dd className="mt-0.5 text-ink-muted">{scopeLabel(flavour)}</dd>
                   </div>
                 </dl>
               )}

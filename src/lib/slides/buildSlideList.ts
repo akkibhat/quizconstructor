@@ -1,5 +1,5 @@
 import { deriveAnswerPool } from "@/lib/answerPool";
-import { ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
+import { effectiveFlavour, ROUND_FLAVOUR_LABELS } from "@/lib/roundFlavourLabels";
 import type { Question } from "@/lib/types/question";
 import type { Round } from "@/lib/types/round";
 import type { Slide } from "@/lib/types/slide";
@@ -41,8 +41,6 @@ export function buildSlideList(
     const answerPool = round.usesAnswerPool
       ? deriveAnswerPool(questionsByRound[round.id] ?? [])
       : [];
-    const flavourLabel = ROUND_FLAVOUR_LABELS[round.flavour];
-
     slides.push({
       type: "round-title",
       roundId: round.id,
@@ -61,7 +59,9 @@ export function buildSlideList(
           roundId: round.id,
           questionId: question.id,
           text: question.text,
-          flavourLabel,
+          // Per-question, not per-round - a "standard" round can mix
+          // question types, each with its own label. See effectiveFlavour.
+          flavourLabel: ROUND_FLAVOUR_LABELS[effectiveFlavour(round, question)],
           options: question.options ?? [],
           answerPool,
           imagePath: question.imagePath,

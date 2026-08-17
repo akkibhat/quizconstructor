@@ -18,7 +18,13 @@ export interface BankQuestion {
   // simply by being typed on a question, and the bank page offers the
   // existing ones as autocomplete. Avoids maintaining a separate list of
   // categories that could end up with orphans or empties.
-  category: string;
+  //
+  // An array, not a single string: the same question (e.g. "which NZ
+  // region is famous for Sauvignon Blanc?") can genuinely belong under
+  // New Zealand, Geography, AND Food & Drink at once - it's one bank
+  // entry, surfaced from any of its categories' pickers, rather than
+  // three near-duplicate copies drifting apart.
+  categories: string[];
 
   // What kind of question this is (standard, true/false, multiple choice,
   // ...) - the same enum a round's flavour uses. A category pool can mix
@@ -57,16 +63,20 @@ export interface BankQuestion {
 }
 
 /**
- * Fills in fields that bank questions saved before flavour/options existed
- * won't have - same reasoning as normaliseQuestion. Legacy questions default
- * to "standard", same as a round that's never had its flavour changed.
+ * Fills in fields that bank questions saved before flavour/options/multi-
+ * category existed won't have - same reasoning as normaliseQuestion.
+ * Legacy questions default to "standard", same as a round that's never had
+ * its flavour changed. Legacy `category: string` documents (single value,
+ * before the multi-category change) get wrapped into a one-item array so
+ * old data keeps working unchanged.
  */
 export function normaliseBankQuestion(id: string, data: DocumentData): BankQuestion {
-  const question = data as Omit<BankQuestion, "id">;
+  const question = data as Omit<BankQuestion, "id"> & { category?: string };
   return {
     ...question,
     id,
     flavour: question.flavour ?? "standard",
     options: question.options ?? null,
+    categories: question.categories ?? (question.category ? [question.category] : []),
   };
 }

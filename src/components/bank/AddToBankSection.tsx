@@ -15,7 +15,7 @@ import type { RoundFlavour } from "@/lib/types/round";
 
 /** Add one question, or paste a batch in the same format the round importer takes. */
 export function AddToBankSection({ categories }: { categories: string[] }) {
-  const [category, setCategory] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [flavour, setFlavour] = useState<RoundFlavour>("standard");
   const [text, setText] = useState("");
   const [answer, setAnswer] = useState("");
@@ -26,15 +26,15 @@ export function AddToBankSection({ categories }: { categories: string[] }) {
   const [message, setMessage] = useState<string | null>(null);
 
   const info = ROUND_FLAVOUR_INFO[flavour];
-  const canAddOne = category.trim() && text.trim() && answer.trim() && !isBusy;
-  const canImport = category.trim() && pasteText.trim() && !isBusy;
+  const canAddOne = selectedCategories.length > 0 && text.trim() && answer.trim() && !isBusy;
+  const canImport = selectedCategories.length > 0 && pasteText.trim() && !isBusy;
 
   async function handleAddOne() {
     setIsBusy(true);
     setMessage(null);
     try {
       await addBankQuestion(
-        category,
+        selectedCategories,
         flavour,
         text,
         answer,
@@ -59,7 +59,7 @@ export function AddToBankSection({ categories }: { categories: string[] }) {
     setIsBusy(true);
     setMessage(null);
     try {
-      await importBankQuestions(category, flavour, parsed);
+      await importBankQuestions(selectedCategories, flavour, parsed);
       setPasteText("");
       setMessage(`Imported ${parsed.length} question${parsed.length === 1 ? "" : "s"}.`);
     } finally {
@@ -70,22 +70,19 @@ export function AddToBankSection({ categories }: { categories: string[] }) {
   return (
     <Panel className="mb-8 space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="bankCategory">Category</Label>
-        <input
-          id="bankCategory"
-          list="bank-categories-add"
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-          placeholder="e.g. Geography, Music: 90s, Film & TV"
-          className={fieldStyles}
+        <ParsedListField
+          id="bankCategories"
+          label="Categories"
+          unitLabel="category"
+          defaultValue={selectedCategories}
+          placeholder={"Geography\nNew Zealand\nFood & Drink"}
+          rows={3}
+          onSave={setSelectedCategories}
         />
-        <datalist id="bank-categories-add">
-          {categories.map((existing) => (
-            <option key={existing} value={existing} />
-          ))}
-        </datalist>
         <p className="text-xs text-ink-muted">
-          Type a new name to start a pool, or pick an existing one to add to it.
+          One per line{categories.length > 0 && ` - existing: ${categories.join(", ")}`}. A
+          question can belong to several pools at once - e.g. a NZ wine fact can sit in New
+          Zealand, Geography, AND Food &amp; Drink, and shows up when pulling from any of them.
         </p>
       </div>
 
@@ -200,7 +197,7 @@ export function AddToBankSection({ categories }: { categories: string[] }) {
           One per line: Question, Answer, Points (optional, defaults to 1) — separated by a Tab
           (paste from a spreadsheet) or a{" "}
           <code className="rounded-chip bg-backdrop px-1 py-0.5 font-mono text-ink-soft">|</code>{" "}
-          pipe. All go into the category and type above.
+          pipe. All go into the categories and type above.
         </p>
         {info.fields.options !== "none" && (
           <p className="rounded-chip border border-flame/40 bg-flame/8 px-3 py-2 text-xs text-flame">

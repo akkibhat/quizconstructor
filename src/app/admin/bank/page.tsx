@@ -81,7 +81,7 @@ function BankContent() {
       {!searchResults && (
         <div className="space-y-3">
           {categories.map((category) => {
-            const inCategory = questions?.filter((q) => q.category === category) ?? [];
+            const inCategory = questions?.filter((q) => q.categories.includes(category)) ?? [];
             const unused = inCategory.filter((q) => q.usageCount === 0).length;
             const isOpen = openCategory === category;
             // What mix of question types this pool holds - e.g. "12 True or
