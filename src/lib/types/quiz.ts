@@ -44,6 +44,22 @@ export interface Quiz {
   // points round. Only meaningful when doublePointsEnabled is true.
   doublePointsPicksPerTeam: number;
 
+  // Opt-in per quiz - off by default, since most nights still run on
+  // paper/host-typed teams. When true, /answer/[code] accepts self-
+  // service registration (one phone per team, via anonymous Firebase
+  // Auth - see Team.ownerUid) and live answer submissions. Toggled
+  // anytime pre-quiz via updateQuiz, not creation-time-only like
+  // doublePointsEnabled/longGameEnabled above.
+  allowsPhoneAnswering: boolean;
+
+  // A second, independent opt-in on top of allowsPhoneAnswering - some
+  // hosts want digital answering without the room seeing a live tally of
+  // what everyone guessed before the reveal (it can spoil the "drumroll"
+  // moment, or just isn't everyone's taste). Only meaningful when
+  // allowsPhoneAnswering is also true; the toggle for this is hidden
+  // otherwise rather than left in a confusing enabled-but-irrelevant state.
+  allowsLiveAnswerReveal: boolean;
+
   status: QuizStatus;
 
   // Soft delete only - Firestore doesn't cascade-delete subcollections, so

@@ -12,6 +12,7 @@ import { SlideView } from "@/components/SlideView";
 import { AppShell, PageHeader } from "@/components/ui/AppShell";
 import { ScreenFrame } from "@/components/ui/ScreenFrame";
 import { Button } from "@/components/ui/Button";
+import { useAnswersForQuestion } from "@/lib/hooks/useAnswersForQuestion";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useLeaderboardTotals } from "@/lib/hooks/useLeaderboardTotals";
 import { useLiveState } from "@/lib/hooks/useLiveState";
@@ -30,6 +31,22 @@ function ControllerContent({ code }: { code: string }) {
   const leaderboard = useLeaderboardTotals(quiz?.id);
   const teams = useTeams(quiz?.id);
   const tiebreakQuestions = useTiebreakQuestions();
+
+  // Only meaningful while a question slide is actually showing - the hook
+  // itself no-ops (returns undefined) when questionId is undefined, so
+  // this is safe to call unconditionally with "current slide, if it's a
+  // question" rather than needing its own early-return dance. teamIds is
+  // rebuilt every render, which is fine - the hook keys its effect off the
+  // joined string, not array identity, so a fresh array each render
+  // doesn't restart the N listeners underneath it.
+  const currentSlideForAnswers = slides && liveState ? slides[liveState.slideIndex] : undefined;
+  const currentQuestionId =
+    currentSlideForAnswers?.type === "question" ? currentSlideForAnswers.questionId : undefined;
+  const answersForCurrentQuestion = useAnswersForQuestion(
+    quiz?.id,
+    (teams ?? []).map((team) => team.id),
+    currentQuestionId
+  );
 
   // Arrow-key shortcuts. In presenter mode they move between slides; in
   // leaderboard mode the same two keys step the progressive reveal
@@ -242,9 +259,17 @@ function ControllerContent({ code }: { code: string }) {
           </p>
           <h1 className="font-display text-2xl font-semibold text-ink">{quiz.title}</h1>
         </div>
-        <span className="font-mono text-sm text-ink-muted tabular-nums">
-          Slide {liveState.slideIndex + 1} / {slides.length}
-        </span>
+        <div className="flex items-center gap-3">
+          {quiz.allowsPhoneAnswering && currentSlide?.type === "question" && teams && (
+            <span className="font-mono text-sm text-flame tabular-nums">
+              {answersForCurrentQuestion ? Object.keys(answersForCurrentQuestion).length : 0}/
+              {teams.length} answered
+            </span>
+          )}
+          <span className="font-mono text-sm text-ink-muted tabular-nums">
+            Slide {liveState.slideIndex + 1} / {slides.length}
+          </span>
+        </div>
       </div>
 
       {/* Scaled down so the projector's real slide layout stays readable

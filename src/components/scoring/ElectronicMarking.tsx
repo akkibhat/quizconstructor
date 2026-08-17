@@ -4,11 +4,15 @@ import { ChipToggle } from "@/components/ui/ChipToggle";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Panel } from "@/components/ui/Panel";
 import { cn } from "@/lib/cn";
 import { setQuestionMark } from "@/lib/electronicScoring";
+import { useAllQuestionMarks } from "@/lib/hooks/useAllQuestionMarks";
 import { useQuestionMarks } from "@/lib/hooks/useQuestionMarks";
 import { useQuestions } from "@/lib/hooks/useQuestions";
+import { useTeamAnswers } from "@/lib/hooks/useTeamAnswers";
+import { autoGradeRound } from "@/lib/teamAnswers";
 import type { Round } from "@/lib/types/round";
 import type { Team } from "@/lib/types/team";
 
@@ -91,6 +95,8 @@ function QuestionMarkRow({
   question,
   currentMarks,
   isDoubled,
+  submittedAnswer,
+  correctnessStat,
 }: {
   quizId: string;
   roundId: string;
@@ -98,6 +104,15 @@ function QuestionMarkRow({
   question: { id: string; text: string; answer: string };
   currentMarks: Record<string, number>;
   isDoubled: boolean;
+  // What this team typed on their phone for this question, if phone
+  // answering is on and they submitted one - null otherwise. Shown so the
+  // host can mark from what was actually typed instead of blind from
+  // paper. Never awards points itself - see autoGradeRound for the
+  // option-based flavours this can be auto-graded for.
+  submittedAnswer: string | null;
+  // "X/Y correct" across every team already marked for this question, or
+  // null if nobody's been marked yet - see useAllQuestionMarks.
+  correctnessStat: { correct: number; total: number } | null;
 }) {
   const awarded = currentMarks[question.id];
   const { base, bonusActive } = inferBaseAndBonus(awarded);
@@ -118,7 +133,17 @@ function QuestionMarkRow({
     <Panel as="li" className="flex flex-wrap items-start justify-between gap-3 p-3">
       <div className="min-w-[12rem] flex-1">
         <p className="text-ink">{question.text}</p>
-        <p className="mt-0.5 text-sm text-ink-muted">Answer: {question.answer}</p>
+        <p className="mt-0.5 text-sm text-ink-muted">
+          Answer: {question.answer}
+          {correctnessStat && (
+            <span className="ml-2 tabular-nums">
+              — {correctnessStat.correct}/{correctnessStat.total} correct
+            </span>
+          )}
+        </p>
+        {submittedAnswer !== null && (
+          <p className="mt-0.5 text-sm text-flame">Submitted: {submittedAnswer}</p>
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         <MarkButton active={base === 0} tone="danger" onClick={() => selectBase(0)}>
@@ -148,24 +173,53 @@ export function ElectronicScoringPanel({
   teams: Team[];
 }) {
   const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(teams[0]?.id);
+  const [isAutoGrading, setIsAutoGrading] = useState(false);
   const questions = useQuestions(quizId, round.id);
   const marks = useQuestionMarks(quizId, round.id, selectedTeamId);
+  const answers = useTeamAnswers(quizId, selectedTeamId);
+  const allMarks = useAllQuestionMarks(quizId, round.id);
   const selectedTeam = teams.find((team) => team.id === selectedTeamId);
 
   const total = marks ? Object.values(marks).reduce((sum, points) => sum + points, 0) : 0;
 
+  // "X/Y correct" per question, across every team marked so far this
+  // round - X counts teams awarded exactly full points, Y is every team
+  // in the quiz (not just those marked), so the stat visibly climbs
+  // toward the full team count as marking progresses rather than looking
+  // "100% correct" when only one team has been graded.
+  function correctnessStatFor(questionId: string, fullPoints: number) {
+    if (!allMarks || allMarks.length === 0) return null;
+    const correct = allMarks.filter((tm) => tm.marks[questionId] === fullPoints).length;
+    return { correct, total: teams.length };
+  }
+
+  async function handleAutoGrade() {
+    if (!questions) return;
+    setIsAutoGrading(true);
+    try {
+      await autoGradeRound(quizId, round, questions, teams);
+    } finally {
+      setIsAutoGrading(false);
+    }
+  }
+
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {teams.map((team) => (
-          <ChipToggle
-            key={team.id}
-            selected={selectedTeamId === team.id}
-            onClick={() => setSelectedTeamId(team.id)}
-          >
-            {team.name}
-          </ChipToggle>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {teams.map((team) => (
+            <ChipToggle
+              key={team.id}
+              selected={selectedTeamId === team.id}
+              onClick={() => setSelectedTeamId(team.id)}
+            >
+              {team.name}
+            </ChipToggle>
+          ))}
+        </div>
+        <Button size="sm" disabled={isAutoGrading || !questions} onClick={handleAutoGrade}>
+          {isAutoGrading ? "Grading…" : "Auto-grade True/False, MC & Odd One Out"}
+        </Button>
       </div>
 
       {selectedTeam && (
@@ -190,6 +244,8 @@ export function ElectronicScoringPanel({
                   question={question}
                   currentMarks={marks}
                   isDoubled={selectedTeam.doubleRoundPicks.includes(round.id)}
+                  submittedAnswer={answers?.[question.id]?.text ?? null}
+                  correctnessStat={correctnessStatFor(question.id, question.points)}
                 />
               ))}
             </ul>

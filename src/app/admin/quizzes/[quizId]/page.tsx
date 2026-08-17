@@ -14,6 +14,7 @@ import { useConfirmDialog } from "@/lib/hooks/useConfirmDialog";
 import { useQuestions } from "@/lib/hooks/useQuestions";
 import { useQuiz } from "@/lib/hooks/useQuiz";
 import { useRounds } from "@/lib/hooks/useRounds";
+import { updateQuiz } from "@/lib/quizzes";
 import {
   addListRound,
   addRound,
@@ -99,9 +100,10 @@ function RoundRow({
 // Host-friendly labels for the code-gated views, matching the dashboard's
 // quick links - internal route names ("Control", "Display") don't mean
 // much to someone skimming a list of buttons.
-function liveLinksFor(code: string) {
+function liveLinksFor(code: string, allowsPhoneAnswering: boolean) {
   return [
     { label: "Team Setup", href: `/team-setup/${code}` },
+    ...(allowsPhoneAnswering ? [{ label: "Join Quiz", href: `/answer/${code}` }] : []),
     { label: "Run Quiz", href: `/control/${code}` },
     { label: "Projector", href: `/display/${code}` },
     { label: "Scoring", href: `/scoring/${code}` },
@@ -109,7 +111,7 @@ function liveLinksFor(code: string) {
   ];
 }
 
-function LiveLinksSection({ code }: { code: string }) {
+function LiveLinksSection({ code, allowsPhoneAnswering }: { code: string; allowsPhoneAnswering: boolean }) {
   // Safe to read window directly here (no useState/useEffect dance to
   // avoid a server/client mismatch) - this component only ever renders
   // once RequireAuth has finished its client-side auth check, which never
@@ -121,7 +123,7 @@ function LiveLinksSection({ code }: { code: string }) {
     <div className="mb-10">
       <SectionHeading>Live Links</SectionHeading>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {liveLinksFor(code).map((link) => (
+        {liveLinksFor(code, allowsPhoneAnswering).map((link) => (
           <Link
             key={link.href}
             href={link.href}
@@ -174,7 +176,46 @@ function QuizEditor({ quizId }: { quizId: string }) {
         }
       />
 
-      <LiveLinksSection code={quiz.code} />
+      <div className="mb-10 space-y-2 rounded-panel border border-edge bg-surface p-4">
+        <label className="flex cursor-pointer items-start gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={quiz.allowsPhoneAnswering}
+            onChange={(event) => updateQuiz(quizId, { allowsPhoneAnswering: event.target.checked })}
+            className="mt-0.5 accent-flame"
+          />
+          <span>
+            Allow phone answering
+            <span className="mt-0.5 block text-xs text-ink-muted">
+              Teams can join and submit answers from their own phone at{" "}
+              <span className="font-mono text-ink-soft">/answer/{quiz.code}</span> - one phone per
+              team. Off by default; most nights still run on paper.
+            </span>
+          </span>
+        </label>
+
+        {quiz.allowsPhoneAnswering && (
+          <label className="flex cursor-pointer items-start gap-2 border-t border-edge pt-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={quiz.allowsLiveAnswerReveal}
+              onChange={(event) =>
+                updateQuiz(quizId, { allowsLiveAnswerReveal: event.target.checked })
+              }
+              className="mt-0.5 accent-flame"
+            />
+            <span>
+              Show a live answer tally on the projector
+              <span className="mt-0.5 block text-xs text-ink-muted">
+                On the answer-reveal slide, shows what the room actually guessed before the
+                correct answer. Off by default - some hosts prefer to keep that moment a surprise.
+              </span>
+            </span>
+          </label>
+        )}
+      </div>
+
+      <LiveLinksSection code={quiz.code} allowsPhoneAnswering={quiz.allowsPhoneAnswering} />
 
       {quiz.longGameEnabled && longGameRound && (
         <Link

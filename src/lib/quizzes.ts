@@ -13,6 +13,7 @@ import {
 import { generateQuizCode } from "@/lib/codeGen";
 import { db } from "@/lib/firebase/client";
 import { newQuestionFields, normaliseQuestion, type Question } from "@/lib/types/question";
+import type { Quiz } from "@/lib/types/quiz";
 import { newRoundFields, normaliseRound } from "@/lib/types/round";
 
 export interface CreateQuizInput {
@@ -84,6 +85,8 @@ export async function createQuiz(
           longGameMaxPoints: input.longGameMaxPoints,
           doublePointsEnabled: input.doublePointsEnabled,
           doublePointsPicksPerTeam: input.doublePointsPicksPerTeam,
+          allowsPhoneAnswering: false,
+          allowsLiveAnswerReveal: false,
           status: "setup",
           archived: false,
           createdAt: serverTimestamp(),
@@ -134,6 +137,19 @@ export async function createQuiz(
   }
 
   throw new Error("Could not generate a unique quiz code after several attempts.");
+}
+
+/**
+ * Updates quiz-wide settings that (unlike doublePointsEnabled/
+ * longGameEnabled, which are creation-time-only) can change anytime
+ * before the quiz goes live - allowsPhoneAnswering and its sibling
+ * allowsLiveAnswerReveal.
+ */
+export async function updateQuiz(
+  quizId: string,
+  updates: Partial<Pick<Quiz, "allowsPhoneAnswering" | "allowsLiveAnswerReveal">>
+): Promise<void> {
+  await updateDoc(doc(db, "quizzes", quizId), { ...updates, updatedAt: serverTimestamp() });
 }
 
 /** Marks a quiz as archived - the only form of "delete" in v1 (see plan doc for why). */
@@ -211,6 +227,11 @@ export async function duplicateQuiz(
           longGameMaxPoints: sourceQuiz.longGameMaxPoints,
           doublePointsEnabled: sourceQuiz.doublePointsEnabled,
           doublePointsPicksPerTeam: sourceQuiz.doublePointsPicksPerTeam,
+          // A duplicated quiz is a fresh setup phase - always starts back
+          // at off, even if the source quiz had it on, since the whole
+          // point of duplicating is a new quiz code and a new team list.
+          allowsPhoneAnswering: false,
+          allowsLiveAnswerReveal: false,
           status: "setup",
           archived: false,
           createdAt: serverTimestamp(),

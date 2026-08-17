@@ -27,6 +27,39 @@ service cloud.firestore {
         && request.auth.uid == get(/databases/$(database)/documents/quizzes/$(quizId)).data.hostUid;
     }
 
+    // True when this device's anon (or any) auth uid is the one that
+    // self-registered the given team - see Team.ownerUid. Only ever true
+    // for teams created via /join/[code]; a host-typed team has
+    // ownerUid == null, which no auth.uid can ever equal.
+    function isOwnerOfTeam(quizId, teamId) {
+      return isSignedIn()
+        && request.auth.uid
+          == get(/databases/$(database)/documents/quizzes/$(quizId)/teams/$(teamId)).data.ownerUid;
+    }
+
+    function quizAllowsPhoneAnswering(quizId) {
+      return get(/databases/$(database)/documents/quizzes/$(quizId)).data.allowsPhoneAnswering == true;
+    }
+
+    // Same doubleRoundPicks validation applies to every path that can
+    // create/update a team - host-typed (/team-setup) and self-service
+    // (/join) alike, so it's shared as one top-level function rather than
+    // repeated per branch below.
+    function teamPicksAreValid(quizId) {
+      return get(/databases/$(database)/documents/quizzes/$(quizId)).data.status == 'setup'
+        && (
+          (
+            get(/databases/$(database)/documents/quizzes/$(quizId)).data.doublePointsEnabled == true
+            && request.resource.data.doubleRoundPicks.size()
+              == get(/databases/$(database)/documents/quizzes/$(quizId)).data.doublePointsPicksPerTeam
+          )
+          || (
+            get(/databases/$(database)/documents/quizzes/$(quizId)).data.doublePointsEnabled == false
+            && request.resource.data.doubleRoundPicks.size() == 0
+          )
+        );
+    }
+
     // Global tiebreak question bank - NOT nested under any quiz, reused
     // across all of them. Auth-only (no code-based read) since it isn't
     // tied to a single quiz's access model at all - it's the host's own
@@ -54,6 +87,31 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Maps a team's recovery code -> {quizId, teamId} - see
+    // registerTeamSelfService (mints one at signup) and reclaimTeam (looks
+    // it up when a new device wants to claim an existing team) in
+    // lib/teams.ts / lib/teamRecovery.ts.
+    //
+    // Same get-only/no-list shape as quizCodes above, and the same
+    // reasoning: reachable only by already knowing the exact code, which
+    // makes it "effectively unguessable" rather than actually secret in
+    // any cryptographic sense - acceptable for a casual quiz night, not
+    // engineered around, exactly like every other code in this file.
+    // Longer than a quiz code specifically because it has to stand on its
+    // own (see generateRecoveryCode in lib/codeGen.ts) rather than being
+    // narrowed by an already-known quiz the way a 4-char quiz code is.
+    //
+    // This is also the actual security boundary for reclaiming a team -
+    // see the teams/{teamId} update rule below, which independently
+    // re-verifies a reclaim attempt's code against this collection via
+    // its own get() rather than trusting anything the client claims.
+    match /teamRecoveryCodes/{code} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
     match /quizzes/{quizId} {
       allow get: if true;
       allow list: if isSignedIn() && request.auth.uid == resource.data.hostUid;
@@ -74,23 +132,68 @@ service cloud.firestore {
         allow read: if true;
         allow delete: if isHostOfQuiz(quizId);
 
-        // Team picks can only be written while the quiz is still in
-        // "setup" (locks them in once the quiz goes live), and must pick
-        // exactly the configured number of double-points rounds - or
-        // none, if double points isn't enabled for this quiz.
-        allow create, update: if isHostOfQuiz(quizId)
-          && get(/databases/$(database)/documents/quizzes/$(quizId)).data.status == 'setup'
+        // Host-typed team (ownerUid must be null - a host doesn't get to
+        // claim a team as their own device's for answer-submission
+        // purposes), or a team claiming itself via /join/[code] (only
+        // when the quiz has opted in, and only claiming its own uid).
+        allow create: if teamPicksAreValid(quizId)
           && (
-            (
-              get(/databases/$(database)/documents/quizzes/$(quizId)).data.doublePointsEnabled == true
-              && request.resource.data.doubleRoundPicks.size()
-                == get(/databases/$(database)/documents/quizzes/$(quizId)).data.doublePointsPicksPerTeam
-            )
+            (isHostOfQuiz(quizId) && request.resource.data.ownerUid == null)
             || (
-              get(/databases/$(database)/documents/quizzes/$(quizId)).data.doublePointsEnabled == false
-              && request.resource.data.doubleRoundPicks.size() == 0
+              quizAllowsPhoneAnswering(quizId)
+              && isSignedIn()
+              && request.resource.data.ownerUid == request.auth.uid
             )
           );
+
+        // The host can edit any team; a self-registered team can only
+        // ever edit its own (ownerUid is immutable on THIS branch -
+        // neither half lets a write change it to something else). See the
+        // separate reclaim branch below for the one legitimate way
+        // ownerUid does change.
+        allow update: if teamPicksAreValid(quizId)
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && (isHostOfQuiz(quizId) || isOwnerOfTeam(quizId, teamId));
+
+        // Recovery-code reclaim (see lib/teamRecovery.ts): a NEW device
+        // takes over an existing team after the original phone is lost or
+        // dies. Deliberately NOT gated on teamPicksAreValid/setup-only -
+        // recovery has to work mid-quiz, that's the whole point. Only
+        // ownerUid is allowed to actually change; name and
+        // doubleRoundPicks must come through unchanged, so a reclaim can't
+        // be used to sneak in an edit a normal update wouldn't allow once
+        // the quiz has gone live. The real check is the get() below: it
+        // independently re-verifies (server-side, not trusting the
+        // client) that the code the write claims to have used really does
+        // map to THIS team in teamRecoveryCodes - a client can't just
+        // assert an arbitrary code and expect this to pass.
+        allow update: if request.resource.data.name == resource.data.name
+          && request.resource.data.doubleRoundPicks == resource.data.doubleRoundPicks
+          && request.resource.data.ownerUid == request.auth.uid
+          && isSignedIn()
+          && get(
+               /databases/$(database)/documents/teamRecoveryCodes/$(request.resource.data.lastClaimedViaCode)
+             ).data.teamId == teamId;
+
+        // A team's own phone-submitted answers - see TeamAnswer. Reads
+        // are deliberately NOT "if true" like the rest of this file: an
+        // answer is live-typed, in-progress content, and letting another
+        // team read it while it's being written is a much easier cheat
+        // than the read-ahead-via-devtools tradeoff already accepted
+        // elsewhere in this file for slide content.
+        match /answers/{questionId} {
+          allow read: if isHostOfQuiz(quizId) || isOwnerOfTeam(quizId, teamId);
+
+          // Only the owning team, only while the quiz has opted in, and
+          // only for the question that's actually live right now - an
+          // answer can't be submitted ahead of time or edited once the
+          // presenter has moved past it.
+          allow create, update: if quizAllowsPhoneAnswering(quizId)
+            && isOwnerOfTeam(quizId, teamId)
+            && get(/databases/$(database)/documents/quizzes/$(quizId)/liveState/current).data.mode == 'presenter'
+            && request.resource.data.submittedAtSlideIndex
+              == get(/databases/$(database)/documents/quizzes/$(quizId)/liveState/current).data.slideIndex;
+        }
       }
 
       match /scores/{roundId} {
